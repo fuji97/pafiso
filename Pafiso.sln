@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pafiso", "src\Pafiso\Pafiso.csproj", "{1C48A12F-F2EF-460F-87E1-8DF904FFC7FB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pafiso.Tests", "tests\Pafiso.Tests\Pafiso.Tests.csproj", "{C7D8EE9E-34BD-4A18-8E33-D190A07A02BB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1C48A12F-F2EF-460F-87E1-8DF904FFC7FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C48A12F-F2EF-460F-87E1-8DF904FFC7FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C48A12F-F2EF-460F-87E1-8DF904FFC7FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C48A12F-F2EF-460F-87E1-8DF904FFC7FB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7D8EE9E-34BD-4A18-8E33-D190A07A02BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7D8EE9E-34BD-4A18-8E33-D190A07A02BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7D8EE9E-34BD-4A18-8E33-D190A07A02BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7D8EE9E-34BD-4A18-8E33-D190A07A02BB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
