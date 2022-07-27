@@ -62,7 +62,12 @@ public class Filter {
         }
         var left = binaryExpression.Left as MemberExpression;
         if (left == null) {
-            throw new InvalidOperationException("Expression must be a binary expression");
+            if (binaryExpression.Left is UnaryExpression unaryExpression) {
+                left = unaryExpression.Operand as MemberExpression;
+            } 
+            if (left == null) {
+                throw new InvalidOperationException("Expression must be a binary expression");
+            }
         }
 
         string? value;
