@@ -13,7 +13,7 @@ public class FilterTest {
     }
 
     private List<Foo> _foos = null!;
-    private Filter _filter;
+    private Filter _filter = null!;
     
     [SetUp]
     public void Setup() {

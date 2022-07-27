@@ -65,24 +65,27 @@ public class Paging {
         );
     }
 
-    public bool Equals(Paging? other) {
+    protected bool Equals(Paging other) {
         return Take == other.Take && Skip == other.Skip;
     }
 
     public override bool Equals(object? obj) {
-        return obj is Paging other && Equals(other);
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != this.GetType()) return false;
+        return Equals((Paging)obj);
     }
 
     public override int GetHashCode() {
         return HashCode.Combine(Take, Skip);
     }
 
-    public static bool operator ==(Paging left, Paging? right) {
-        return left.Equals(right);
+    public static bool operator ==(Paging? left, Paging? right) {
+        return Equals(left, right);
     }
 
     public static bool operator !=(Paging? left, Paging? right) {
-        return !left.Equals(right);
+        return !Equals(left, right);
     }
 
     public static Paging operator +(Paging a, int pages) {

@@ -31,7 +31,6 @@ public class SearchParameters {
             var orderedQuery = query.OrderBy(Sortings.First());
             query = Sortings.Skip(1).Aggregate(orderedQuery, 
                 (current, sorting) => current.ThenBy(sorting));
-            
         }
 
         var count = query.Count();

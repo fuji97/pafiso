@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Text.Json;
+using FluentAssertions;
 using NUnit.Framework;
 using Pafiso.Util;
 
@@ -31,11 +32,12 @@ public class PagingTest {
         var paging = Paging.FromPaging(3, 10);
         var json = JsonSerializer.Serialize(paging);
         var paging2 = JsonSerializer.Deserialize<Paging>(json);
-        
-        Assert.AreEqual(paging.Skip, paging2.Skip);
-        Assert.AreEqual(paging.Take, paging2.Take);
-        Assert.AreEqual(paging.Page, paging2.Page);
-        Assert.AreEqual(paging.PageSize, paging2.PageSize);
+
+        paging2.Should().NotBeNull();
+        paging2!.Skip.Should().Be(paging.Skip);
+        paging2!.Take.Should().Be(paging.Take);
+        paging2!.Page.Should().Be(paging.Page);
+        paging2!.PageSize.Should().Be(paging.PageSize);
     }
 
     [Test]

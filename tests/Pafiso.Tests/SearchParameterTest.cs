@@ -4,7 +4,7 @@ using NUnit.Framework;
 namespace Pafiso.Tests; 
 
 public class SearchParameterTest {
-    private SearchParameters _searchParameters;
+    private SearchParameters _searchParameters = null!;
     
     [SetUp]
     public void Setup() {

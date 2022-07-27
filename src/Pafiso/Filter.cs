@@ -7,21 +7,21 @@ namespace Pafiso;
 public class Filter {
     public List<string> Fields { get; } = new();
     public FilterOperator Operator { get; }
-    public string Value { get; } = null!;
+    public string? Value { get; } = null!;
     public bool CaseSensitive { get; } = false;
 
     public Filter() {
     }
 
     [JsonConstructor]
-    public Filter(string field, FilterOperator @operator, string value, bool caseSensitive = false) {
+    public Filter(string field, FilterOperator @operator, string? value, bool caseSensitive = false) {
         Fields = new List<string> { field };
         Operator = @operator;
         Value = value;
         CaseSensitive = caseSensitive;
     }
 
-    public Filter(IEnumerable<string> fields, FilterOperator @operator, string value, bool caseSensitive) {
+    public Filter(IEnumerable<string> fields, FilterOperator @operator, string? value, bool caseSensitive) {
         Fields = fields.ToList();
         Operator = @operator;
         Value = value;
@@ -78,15 +78,26 @@ public class Filter {
             ExpressionType.LessThanOrEqual => FilterOperator.LessThanOrEquals,
             _ => throw new InvalidOperationException("Expression must be a binary expression")
         };
+        
+        // Convert to null check if value is null and operator is equals or not equals
+        if (value == null) {
+            operatorName = operatorName switch {
+                FilterOperator.Equals => FilterOperator.Null,
+                FilterOperator.NotEquals => FilterOperator.NotNull,
+                _ => operatorName
+            };
+        }
         return new Filter(field, operatorName, value);
     }
 
-    public IDictionary<string,string> ToDictionary() {
-        var dict = new Dictionary<string,string>() {
+    public IDictionary<string, string> ToDictionary() {
+        var dict = new Dictionary<string, string>() {
             ["fields"] = string.Join(',', Fields),
             ["op"] = Operator.ToString(),
-            ["val"] = Value
         };
+        if (Value != null) {
+            dict["val"] = Value;
+        }
         if (CaseSensitive) {
             dict["case"] = "true";
         }
@@ -94,10 +105,10 @@ public class Filter {
         return dict;
     }
     
-    public static Filter FromDictionary(IDictionary<string,string> dict) {
-        var fields = dict["fields"].Split(",");
-        var op = dict["op"];
-        var val = dict["val"];
+    public static Filter FromDictionary(IDictionary<string, string> dict) {
+        var fields = dict["fields"]!.Split(",");
+        var op = dict["op"]!;
+        dict.TryGetValue("val", out var val);
         var caseSensitive = dict.ContainsKey("case") && dict["case"] == "true";
         return new Filter(fields, Enum.Parse<FilterOperator>(op), val, caseSensitive);
     }

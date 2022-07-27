@@ -15,7 +15,7 @@ public static class FilterExtensions {
     }
     
     public static IQueryable<T> ApplyFilter<T>(Filter filter, IQueryable<T> query) {
-        var value = filter.CaseSensitive ? filter.Value : filter.Value.ToLower();
+        var value = filter.CaseSensitive ? filter.Value : filter.Value?.ToLower();
 
         var predicatesBuilder = PredicateBuilder.New<T>();
 
@@ -26,24 +26,24 @@ public static class FilterExtensions {
         return query.Where(predicatesBuilder);
     }
 
-    private static Expression<Func<T,bool>> ApplyCorrectOperation<T>(Filter filter, string field, string value) {
+    private static Expression<Func<T,bool>> ApplyCorrectOperation<T>(Filter filter, string field, string? value) {
         switch (filter.Operator) {
             case FilterOperator.Equals:
                 return (x => GetStringPropertyValue(x, field, filter.CaseSensitive) == value);
             case FilterOperator.NotEquals:
                 return (x => GetStringPropertyValue(x, field, filter.CaseSensitive) != value);
             case FilterOperator.GreaterThan:
-                return (x => float.Parse(GetStringPropertyValue(x, field, true)) > float.Parse(value));
+                return (x => float.Parse(GetStringPropertyValue(x, field, true)) > float.Parse(value!));    // TODO Correct null handling
             case FilterOperator.LessThan:
-                return (x => float.Parse(GetStringPropertyValue(x, field, true)) <= float.Parse(value));
+                return (x => float.Parse(GetStringPropertyValue(x, field, true)) <= float.Parse(value!));   // TODO Correct null handling
             case FilterOperator.GreaterThanOrEquals:
-                return (x => float.Parse(GetStringPropertyValue(x, field, true)) > float.Parse(value));
+                return (x => float.Parse(GetStringPropertyValue(x, field, true)) > float.Parse(value!));    // TODO Correct null handling
             case FilterOperator.LessThanOrEquals:
-                return (x => float.Parse(GetStringPropertyValue(x, field, true)) <= float.Parse(value));
+                return (x => float.Parse(GetStringPropertyValue(x, field, true)) <= float.Parse(value!));   // TODO Correct null handling
             case FilterOperator.Contains:
-                return (x => GetStringPropertyValue(x, field, filter.CaseSensitive).Contains(value));
+                return (x => GetStringPropertyValue(x, field, filter.CaseSensitive).Contains(value!));  // TODO Correct null handling
             case FilterOperator.NotContains:
-                return (x => !GetStringPropertyValue(x, field, filter.CaseSensitive).Contains(value));
+                return (x => !GetStringPropertyValue(x, field, filter.CaseSensitive).Contains(value!)); // TODO Correct null handling
             case FilterOperator.Null:
                 return (x => GetPropertyValue(x, field) == null);
             case FilterOperator.NotNull:
