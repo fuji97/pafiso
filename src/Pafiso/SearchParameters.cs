@@ -90,4 +90,12 @@ public class SearchParameters {
     public static bool operator !=(SearchParameters? left, SearchParameters? right) {
         return !Equals(left, right);
     }
+    
+    public static SearchParameters operator +(SearchParameters left, SearchParameters right) {
+        return new SearchParameters {
+            Paging = left.Paging ?? right.Paging,
+            Sortings = left.Sortings.Concat(right.Sortings).ToList(),
+            Filters = left.Filters.Concat(right.Filters).ToList()
+        };
+    }
 }
