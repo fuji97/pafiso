@@ -21,8 +21,14 @@ public class Filter {
         CaseSensitive = caseSensitive;
     }
 
-    public Filter(IEnumerable<string> fields, FilterOperator @operator, string? value, bool caseSensitive) {
+    public Filter(IEnumerable<string> fields, FilterOperator @operator, string? value, bool caseSensitive = false) {
         Fields = fields.ToList();
+        Operator = @operator;
+        Value = value;
+        CaseSensitive = caseSensitive;
+    }
+
+    public Filter(FilterOperator @operator, string? value, bool caseSensitive = false) {
         Operator = @operator;
         Value = value;
         CaseSensitive = caseSensitive;
@@ -104,7 +110,7 @@ public class Filter {
 
         return dict;
     }
-    
+
     public static Filter FromDictionary(IDictionary<string, string> dict) {
         var fields = dict["fields"]!.Split(",");
         var op = dict["op"]!;
