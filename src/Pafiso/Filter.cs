@@ -171,6 +171,18 @@ public class Filter {
 }
 
 public class Filter<T> : Filter {
+    public Filter() {
+    }
+
+    public Filter(string field, FilterOperator @operator, string? value, bool caseSensitive = false) : base(field, @operator, value, caseSensitive) {
+    }
+
+    public Filter(IEnumerable<string> fields, FilterOperator @operator, string? value, bool caseSensitive = false) : base(fields, @operator, value, caseSensitive) {
+    }
+
+    public Filter(FilterOperator @operator, string? value, bool caseSensitive = false) : base(@operator, value, caseSensitive) {
+    }
+
     public Filter<T> AddField(Expression<Func<T,object>> fieldExpression) {
         AddField<T>(fieldExpression);
         return this;
