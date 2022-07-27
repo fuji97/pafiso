@@ -1,4 +1,5 @@
-﻿using Pafiso.Util;
+﻿using Pafiso.Enumerables;
+using Pafiso.Util;
 
 namespace Pafiso; 
 
@@ -19,7 +20,7 @@ public class SearchParameters {
         return this;
     }
 
-    public IQueryable<T> ApplyToIQueryable<T>(IQueryable<T> query) {
+    public PagedQueryable<T> ApplyToIQueryable<T>(IQueryable<T> query) {
         if (Filters.Any()) {
             foreach (var filter in Filters) {
                 query = query.Where(filter);
@@ -33,11 +34,13 @@ public class SearchParameters {
             
         }
 
+        var count = query.Count();
+
         if (Paging != null) {
             query = query.Paging(Paging);
         }
         
-        return query;
+        return new PagedQueryable<T>(count, query);
     }
 
     public IDictionary<string, string> ToDictionary() {

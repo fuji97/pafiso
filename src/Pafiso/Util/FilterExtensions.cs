@@ -75,7 +75,8 @@ public static class FilterExtensions {
     /// <exception cref="ArgumentException"></exception>
     public static object? GetPropertyValue(object? src, string propName)
     {
-        if (src == null) throw new ArgumentException("Value cannot be null.", nameof(src));
+        //if (src == null) throw new ArgumentException("Value cannot be null.", "src");
+        if (src == null) return null;
         if (propName == null) throw new ArgumentException("Value cannot be null.", nameof(propName));
 
         if(propName.Contains('.')) //complex type nested
