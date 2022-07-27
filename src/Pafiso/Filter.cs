@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using System.Text.Json.Serialization;
+using LinqKit;
 using Pafiso.Util;
 
 namespace Pafiso; 
@@ -117,5 +118,61 @@ public class Filter {
         dict.TryGetValue("val", out var val);
         var caseSensitive = dict.ContainsKey("case") && dict["case"] == "true";
         return new Filter(fields, Enum.Parse<FilterOperator>(op), val, caseSensitive);
+    }
+    
+    public Filter AddField<T>(Expression<Func<T, object>> fieldExpression) {
+        var member = fieldExpression.Body as MemberExpression;
+        if (member == null) {
+            throw new InvalidOperationException("Expression must be a member expression");
+        }
+        var field = ExpressionUtilities.MemberDecomposer(member);
+        Fields.Add(field);
+        return this;
+    }
+    
+    public IQueryable<T> ApplyFilter<T>(IQueryable<T> query) {
+        var value = CaseSensitive ? Value : Value?.ToLower();
+
+        var predicatesBuilder = PredicateBuilder.New<T>();
+
+        foreach (var field in Fields) {
+            predicatesBuilder.Or(ApplyCorrectOperation<T>(this, field, value));
+        }
+
+        return query.Where(predicatesBuilder);
+    }
+    
+    private Expression<Func<T,bool>> ApplyCorrectOperation<T>(Filter filter, string field, string? value) {
+        switch (filter.Operator) {
+            case FilterOperator.Equals:
+                return (x => ExpressionUtilities.GetStringPropertyValue(x, field, filter.CaseSensitive) == value);
+            case FilterOperator.NotEquals:
+                return (x => ExpressionUtilities.GetStringPropertyValue(x, field, filter.CaseSensitive) != value);
+            case FilterOperator.GreaterThan:
+                return (x => float.Parse(ExpressionUtilities.GetStringPropertyValue(x, field, true)) > float.Parse(value!));    // TODO Correct null handling
+            case FilterOperator.LessThan:
+                return (x => float.Parse(ExpressionUtilities.GetStringPropertyValue(x, field, true)) <= float.Parse(value!));   // TODO Correct null handling
+            case FilterOperator.GreaterThanOrEquals:
+                return (x => float.Parse(ExpressionUtilities.GetStringPropertyValue(x, field, true)) > float.Parse(value!));    // TODO Correct null handling
+            case FilterOperator.LessThanOrEquals:
+                return (x => float.Parse(ExpressionUtilities.GetStringPropertyValue(x, field, true)) <= float.Parse(value!));   // TODO Correct null handling
+            case FilterOperator.Contains:
+                return (x => ExpressionUtilities.GetStringPropertyValue(x, field, filter.CaseSensitive).Contains(value!));  // TODO Correct null handling
+            case FilterOperator.NotContains:
+                return (x => !ExpressionUtilities.GetStringPropertyValue(x, field, filter.CaseSensitive).Contains(value!)); // TODO Correct null handling
+            case FilterOperator.Null:
+                return (x => ExpressionUtilities.GetPropertyValue(x, field) == null);
+            case FilterOperator.NotNull:
+                return (x => ExpressionUtilities.GetPropertyValue(x, field) != null);
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+}
+
+public class Filter<T> : Filter {
+    public Filter<T> AddField(Expression<Func<T,object>> fieldExpression) {
+        AddField<T>(fieldExpression);
+        return this;
     }
 }
