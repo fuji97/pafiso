@@ -54,12 +54,20 @@ public class Filter {
             throw new InvalidOperationException("Expression must be a binary expression");
         }
         var left = binaryExpression.Left as MemberExpression;
-        var right = binaryExpression.Right as ConstantExpression;
-        if (left == null || right == null) {
+        if (left == null) {
             throw new InvalidOperationException("Expression must be a binary expression");
         }
+
+        string? value;
+        if (binaryExpression.Right is ConstantExpression constantExpression) {
+            value = constantExpression.Value?.ToString();
+        } else if (binaryExpression.Right is MemberExpression rightMember) {
+            value = ExpressionUtilities.GetValue(rightMember).ToString();
+        } else {
+            throw new InvalidOperationException("Expression must be a binary expression");
+        }
+        
         var field = ExpressionUtilities.MemberDecomposer(left);
-        var value = right.Value.ToString();
         var operatorType = binaryExpression.NodeType;
         var operatorName = operatorType switch {
             ExpressionType.Equal => FilterOperator.Equals,

@@ -18,9 +18,20 @@ public class Sorting {
     }
 
     public static Sorting FromExpression<T>(Expression<Func<T, object>> expr, SortOrder order) {
-        if (expr.Body is not MemberExpression member)
-            throw new ArgumentException("Expression must be a member access expression", nameof(expr));
-        return new Sorting(member.Member.Name, order);
+        MemberExpression? memberExpression;
+        if (expr.Body is MemberExpression member) {
+            memberExpression = member;
+        } else if (expr.Body is UnaryExpression unary) {
+            memberExpression = unary.Operand as MemberExpression;
+        } else {
+            throw new InvalidOperationException("Expression must be a member expression");
+        }
+
+        if (memberExpression == null) {
+            throw new InvalidOperationException("Expression must be a member expression");
+        }
+        
+        return new Sorting(memberExpression.Member.Name, order);
     }
 
     public IOrderedQueryable<T> ApplyToIQueryable<T>(IQueryable<T> query) {

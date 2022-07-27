@@ -12,4 +12,11 @@ public static class ExpressionUtilities {
 
         return field;
     }
+    
+    public static object GetValue(MemberExpression member) {
+        var objectMember = Expression.Convert(member, typeof(object));
+        var getterLambda = Expression.Lambda<Func<object>>(objectMember);
+        var getter = getterLambda.Compile();
+        return getter();
+    }
 }
