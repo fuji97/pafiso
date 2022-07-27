@@ -46,7 +46,17 @@ public static class ExpressionUtilities {
     }
     
     public static string GetStringPropertyValue<T>(T obj, string propName, bool caseSensitive) {
-        var value = GetPropertyValue(obj, propName)?.ToString();
+        var propValue = GetPropertyValue(obj, propName);
+        if (propValue == null) {
+            throw new ArgumentNullException($"Null value: {propName}");
+        }
+        
+        // Cast to long if enum
+        if (propValue is Enum) {
+            propValue = Convert.ToInt64(propValue);
+        }
+        
+        var value = propValue.ToString();
         if (!caseSensitive) {
             value = value?.ToLower();
         }
