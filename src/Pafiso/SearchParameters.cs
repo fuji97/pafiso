@@ -134,27 +134,27 @@ public class SearchParameters<T> : SearchParameters {
         set => _filters = value.Cast<Filter>().ToList();
     }
     
-    public SearchParameters AddSorting(params Sorting<T>[] sorting) {
+    public SearchParameters<T> AddSorting(params Sorting<T>[] sorting) {
         Sortings.AddRange(sorting);
         return this;
     }
     
-    public SearchParameters AddSortingFromExpression(Expression<Func<T,object>> expression, SortOrder order) {
+    public SearchParameters<T> AddSortingFromExpression(Expression<Func<T,object>> expression, SortOrder order) {
         Sortings.Add(Sorting<T>.FromExpression(expression, order));
         return this;
     }
 
-    public SearchParameters AddFilters(params Filter<T>[] filters) {
+    public SearchParameters<T> AddFilters(params Filter<T>[] filters) {
         Filters.AddRange(filters);
         return this;
     }
     
-    public SearchParameters AddFilterFromExpression(Expression<Func<T,bool>> expression) {
+    public SearchParameters<T> AddFilterFromExpression(Expression<Func<T,bool>> expression) {
         Filters.Add(Filter<T>.FromExpression(expression));
         return this;
     }
     
-    public static SearchParameters operator +(SearchParameters<T> left, SearchParameters<T> right) {
+    public static SearchParameters<T> operator +(SearchParameters<T> left, SearchParameters<T> right) {
         return new SearchParameters<T> {
             Paging = left.Paging ?? right.Paging,
             Sortings = left.Sortings.Concat(right.Sortings).ToList(),
