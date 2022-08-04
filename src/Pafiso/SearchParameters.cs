@@ -148,4 +148,17 @@ public class SearchParameters<T> : SearchParameters {
         Filters.AddRange(filters);
         return this;
     }
+    
+    public SearchParameters AddFilterFromExpression(Expression<Func<T,bool>> expression) {
+        Filters.Add(Filter<T>.FromExpression(expression));
+        return this;
+    }
+    
+    public static SearchParameters operator +(SearchParameters<T> left, SearchParameters<T> right) {
+        return new SearchParameters<T> {
+            Paging = left.Paging ?? right.Paging,
+            Sortings = left.Sortings.Concat(right.Sortings).ToList(),
+            Filters = left.Filters.Concat(right.Filters).ToList()
+        };
+    }
 }
