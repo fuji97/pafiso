@@ -1,5 +1,4 @@
-﻿using System.Linq.Expressions;
-using Pafiso.Enumerables;
+﻿using Pafiso.Enumerables;
 using Pafiso.Util;
 
 namespace Pafiso;
@@ -111,51 +110,6 @@ public class SearchParameters {
 
     public static SearchParameters operator +(SearchParameters left, SearchParameters right) {
         return new SearchParameters {
-            Paging = left.Paging ?? right.Paging,
-            Sortings = left.Sortings.Concat(right.Sortings).ToList(),
-            Filters = left.Filters.Concat(right.Filters).ToList()
-        };
-    }
-}
-
-public class SearchParameters<T> : SearchParameters {
-    public SearchParameters() {
-    }
-    
-    public SearchParameters(Paging? paging) : base(paging) {
-    }
-
-    public new List<Sorting<T>> Sortings {
-        get => _sortings.Cast<Sorting<T>>().ToList();
-        set => _sortings = value.Cast<Sorting>().ToList();
-    }
-    public new List<Filter<T>> Filters {
-        get => _filters.Cast<Filter<T>>().ToList();
-        set => _filters = value.Cast<Filter>().ToList();
-    }
-    
-    public SearchParameters<T> AddSorting(params Sorting<T>[] sorting) {
-        Sortings.AddRange(sorting);
-        return this;
-    }
-    
-    public SearchParameters<T> AddSortingFromExpression(Expression<Func<T,object>> expression, SortOrder order) {
-        Sortings.Add(Sorting<T>.FromExpression(expression, order));
-        return this;
-    }
-
-    public SearchParameters<T> AddFilters(params Filter<T>[] filters) {
-        Filters.AddRange(filters);
-        return this;
-    }
-    
-    public SearchParameters<T> AddFilterFromExpression(Expression<Func<T,bool>> expression) {
-        Filters.Add(Filter<T>.FromExpression(expression));
-        return this;
-    }
-    
-    public static SearchParameters<T> operator +(SearchParameters<T> left, SearchParameters<T> right) {
-        return new SearchParameters<T> {
             Paging = left.Paging ?? right.Paging,
             Sortings = left.Sortings.Concat(right.Sortings).ToList(),
             Filters = left.Filters.Concat(right.Filters).ToList()

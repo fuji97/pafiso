@@ -76,19 +76,9 @@ public class Sorting<T> : Sorting {
     }
     
     public static Sorting<T> FromExpression(Expression<Func<T, object>> expr, SortOrder order) {
-        MemberExpression? memberExpression;
-        if (expr.Body is MemberExpression member) {
-            memberExpression = member;
-        } else if (expr.Body is UnaryExpression unary) {
-            memberExpression = unary.Operand as MemberExpression;
-        } else {
-            throw new InvalidOperationException("Expression must be a member expression");
-        }
-
-        if (memberExpression == null) {
-            throw new InvalidOperationException("Expression must be a member expression");
-        }
-        
-        return new Sorting<T>(memberExpression.Member.Name, order);
+        var field = ExpressionUtilities.ExpressionDecomposer(expr.Body);
+        return new Sorting<T>(field, order);
     }
+    
+    
 }
