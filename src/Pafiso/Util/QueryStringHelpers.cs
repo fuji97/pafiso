@@ -4,7 +4,7 @@ namespace Pafiso.Util;
 
 public static class QueryStringHelpers {
     private static readonly Regex QueryStringRegex = new Regex(@"^(.+)\[(\d+)\]\[(.+)\]$", RegexOptions.Compiled);
-    
+
     public static IDictionary<string,string> MergeListOfQueryStrings(string name, IEnumerable<IDictionary<string,string>> queryStrings) {
         var result = new Dictionary<string,string>();
         var i = 0;

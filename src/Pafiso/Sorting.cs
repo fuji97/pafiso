@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Linq.Expressions;
 using System.Text.Json.Serialization;
+using Pafiso.Util;
 
 namespace Pafiso;
 
@@ -18,38 +19,20 @@ public class Sorting {
     }
 
     public static Sorting FromExpression<T>(Expression<Func<T, object>> expr, SortOrder order) {
-        MemberExpression? memberExpression;
-        if (expr.Body is MemberExpression member) {
-            memberExpression = member;
-        } else if (expr.Body is UnaryExpression unary) {
-            memberExpression = unary.Operand as MemberExpression;
-        } else {
-            throw new InvalidOperationException("Expression must be a member expression");
-        }
-
-        if (memberExpression == null) {
-            throw new InvalidOperationException("Expression must be a member expression");
-        }
-        
-        return new Sorting(memberExpression.Member.Name, order);
+        var field = ExpressionUtilities.ExpressionDecomposer(expr.Body);
+        return new Sorting(field, order);
     }
 
     public IOrderedQueryable<T> ApplyToIQueryable<T>(IQueryable<T> query) {
-        var prop = TypeDescriptor.GetProperties(typeof(T)).Find(PropertyName, false);
-        
-        if (prop is null)
-            throw new ArgumentException($"Property {PropertyName} not found", nameof(PropertyName));
-        
-        return Ascending ? query.OrderBy(x => prop.GetValue(x)) : query.OrderByDescending(x => prop.GetValue(x));
+        var expr = ExpressionUtilities.BuildExpression<T,object>(PropertyName);
+
+        return Ascending ? query.OrderBy(expr) : query.OrderByDescending(expr);
     }
     
     public IOrderedQueryable<T> ThenApplyToIQueryable<T>(IOrderedQueryable<T> query) {
-        var prop = TypeDescriptor.GetProperties(typeof(T)).Find(PropertyName, false);
-        
-        if (prop is null)
-            throw new ArgumentException($"Property {PropertyName} not found", nameof(PropertyName));
-        
-        return Ascending ? query.ThenBy(x => prop.GetValue(x)) : query.ThenByDescending(x => prop.GetValue(x));
+        var expr = ExpressionUtilities.BuildExpression<T,object>(PropertyName);
+
+        return Ascending ? query.ThenBy(expr) : query.ThenByDescending(expr);
     }
     
     public IDictionary<string,string> ToDictionary() {
@@ -85,5 +68,27 @@ public class Sorting {
 
     public static bool operator !=(Sorting left, Sorting right) {
         return !left.Equals(right);
+    }
+}
+
+public class Sorting<T> : Sorting {
+    public Sorting(string propertyName, SortOrder sortOrder) : base(propertyName, sortOrder) {
+    }
+    
+    public static Sorting FromExpression(Expression<Func<T, object>> expr, SortOrder order) {
+        MemberExpression? memberExpression;
+        if (expr.Body is MemberExpression member) {
+            memberExpression = member;
+        } else if (expr.Body is UnaryExpression unary) {
+            memberExpression = unary.Operand as MemberExpression;
+        } else {
+            throw new InvalidOperationException("Expression must be a member expression");
+        }
+
+        if (memberExpression == null) {
+            throw new InvalidOperationException("Expression must be a member expression");
+        }
+        
+        return new Sorting(memberExpression.Member.Name, order);
     }
 }

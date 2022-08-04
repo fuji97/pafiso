@@ -79,7 +79,7 @@ public class Filter {
             throw new InvalidOperationException("Expression must be a binary expression");
         }
         
-        var field = ExpressionUtilities.MemberDecomposer(left);
+        var field = ExpressionUtilities.ExpressionDecomposer(left);
         var operatorType = binaryExpression.NodeType;
         var operatorName = operatorType switch {
             ExpressionType.Equal => FilterOperator.Equals,
@@ -130,7 +130,7 @@ public class Filter {
         if (member == null) {
             throw new InvalidOperationException("Expression must be a member expression");
         }
-        var field = ExpressionUtilities.MemberDecomposer(member);
+        var field = ExpressionUtilities.ExpressionDecomposer(member);
         Fields.Add(field);
         return this;
     }

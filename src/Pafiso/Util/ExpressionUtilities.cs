@@ -3,14 +3,22 @@
 namespace Pafiso.Util; 
 
 public static class ExpressionUtilities {
-    public static string MemberDecomposer(MemberExpression member) {
-        var field = member.Member.Name;
-        
-        if (member.Expression is MemberExpression expression) {
-            return $"{MemberDecomposer(expression)}.{field}";
-        }
+    public static string ExpressionDecomposer(Expression expr) {
+        if (expr is MemberExpression member) {
+            var field = member.Member.Name;
 
-        return field;
+            if (member.Expression is MemberExpression memberExpression) {
+                return $"{ExpressionDecomposer(memberExpression)}.{field}";
+            }
+            
+            return field;
+        }
+        
+        if (expr is UnaryExpression unary) {
+            return ExpressionDecomposer(unary.Operand);
+        }
+        
+        throw new ArgumentException("Expression must be a member or unary expression");
     }
     
     public static object GetValue(MemberExpression member) {
@@ -65,5 +73,25 @@ public static class ExpressionUtilities {
         }
 
         return value;
+    }
+
+    /// <summary>
+    /// From: https://stackoverflow.com/questions/16208214/construct-lambdaexpression-for-nested-property-from-string
+    /// </summary>
+    /// <param name="propName"></param>
+    /// <param name="paramName"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="TResult"></typeparam>
+    /// <returns></returns>
+    public static Expression<Func<T,TResult>> BuildExpression<T,TResult> (string propName, string paramName = "x") {
+        var param = Expression.Parameter(typeof(T), paramName);
+        Expression body = param;
+        foreach (var member in propName.Split('.')) {
+            body = Expression.PropertyOrField(body, member);
+        }
+        if (body.Type != typeof(TResult)) {
+            body = Expression.Convert(body, typeof(TResult));
+        }
+        return Expression.Lambda<Func<T,TResult>>(body, param);
     }
 }
