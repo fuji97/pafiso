@@ -1,4 +1,5 @@
-﻿using Pafiso.Enumerables;
+﻿using System.Linq.Expressions;
+using Pafiso.Enumerables;
 using Pafiso.Util;
 
 namespace Pafiso;
@@ -135,6 +136,11 @@ public class SearchParameters<T> : SearchParameters {
     
     public SearchParameters AddSorting(params Sorting<T>[] sorting) {
         Sortings.AddRange(sorting);
+        return this;
+    }
+    
+    public SearchParameters AddSortingFromExpression(Expression<Func<T,object>> expression, SortOrder order) {
+        Sortings.Add(Sorting<T>.FromExpression(expression, order));
         return this;
     }
 

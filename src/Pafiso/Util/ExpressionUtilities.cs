@@ -28,6 +28,13 @@ public static class ExpressionUtilities {
         return getter();
     }
     
+    public static object GetValue<T>(MemberExpression member) {
+        var objectMember = Expression.Convert(member, typeof(T));
+        var getterLambda = Expression.Lambda<Func<T>>(objectMember);
+        var getter = getterLambda.Compile();
+        return getter() ?? throw new InvalidOperationException();
+    }
+    
     /// <summary>
     /// Obtain value from nester property values.
     /// https://stackoverflow.com/questions/1954746/using-reflection-in-c-sharp-to-get-properties-of-a-nested-object

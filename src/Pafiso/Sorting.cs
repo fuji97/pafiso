@@ -75,7 +75,7 @@ public class Sorting<T> : Sorting {
     public Sorting(string propertyName, SortOrder sortOrder) : base(propertyName, sortOrder) {
     }
     
-    public static Sorting FromExpression(Expression<Func<T, object>> expr, SortOrder order) {
+    public static Sorting<T> FromExpression(Expression<Func<T, object>> expr, SortOrder order) {
         MemberExpression? memberExpression;
         if (expr.Body is MemberExpression member) {
             memberExpression = member;
@@ -89,6 +89,6 @@ public class Sorting<T> : Sorting {
             throw new InvalidOperationException("Expression must be a member expression");
         }
         
-        return new Sorting(memberExpression.Member.Name, order);
+        return new Sorting<T>(memberExpression.Member.Name, order);
     }
 }

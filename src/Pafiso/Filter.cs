@@ -60,15 +60,7 @@ public class Filter {
         if (binaryExpression == null) {
             throw new InvalidOperationException("Expression must be a binary expression");
         }
-        var left = binaryExpression.Left as MemberExpression;
-        if (left == null) {
-            if (binaryExpression.Left is UnaryExpression unaryExpression) {
-                left = unaryExpression.Operand as MemberExpression;
-            } 
-            if (left == null) {
-                throw new InvalidOperationException("Expression must be a binary expression");
-            }
-        }
+        var field = ExpressionUtilities.ExpressionDecomposer(binaryExpression.Left);
 
         string? value;
         if (binaryExpression.Right is ConstantExpression constantExpression) {
@@ -76,10 +68,9 @@ public class Filter {
         } else if (binaryExpression.Right is MemberExpression rightMember) {
             value = ExpressionUtilities.GetValue(rightMember).ToString();
         } else {
-            throw new InvalidOperationException("Expression must be a binary expression");
+            throw new InvalidOperationException("Invalid right expression");
         }
         
-        var field = ExpressionUtilities.ExpressionDecomposer(left);
         var operatorType = binaryExpression.NodeType;
         var operatorName = operatorType switch {
             ExpressionType.Equal => FilterOperator.Equals,
@@ -191,5 +182,10 @@ public class Filter<T> : Filter {
     public Filter<T> AddField(Expression<Func<T,object>> fieldExpression) {
         AddField<T>(fieldExpression);
         return this;
+    }
+
+    public static Filter<T> FromExpression(Expression<Func<T,bool>> expression) {
+        var genericFilter = Filter.FromExpression(expression);
+        return new Filter<T>(genericFilter.Fields, genericFilter.Operator, genericFilter.Value, genericFilter.CaseSensitive);
     }
 }
