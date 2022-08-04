@@ -23,6 +23,13 @@ public class SearchParameters {
         set => _filters = value;
     }
 
+    public SearchParameters() {
+    }
+
+    public SearchParameters(Paging? paging) {
+        _paging = paging;
+    }
+
     public SearchParameters AddSorting(params Sorting[] sorting) {
         Sortings.AddRange(sorting);
         return this;
@@ -111,6 +118,12 @@ public class SearchParameters {
 }
 
 public class SearchParameters<T> : SearchParameters {
+    public SearchParameters() {
+    }
+    
+    public SearchParameters(Paging? paging) : base(paging) {
+    }
+
     public new List<Sorting<T>> Sortings {
         get => _sortings.Cast<Sorting<T>>().ToList();
         set => _sortings = value.Cast<Sorting>().ToList();
