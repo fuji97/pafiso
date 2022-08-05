@@ -164,6 +164,10 @@ public class Filter {
                 throw new ArgumentOutOfRangeException();
         }
     }
+
+    public override string ToString() {
+        return $"({string.Join(" OR ", Fields.Select(field => $"{field} {Operator} {Value}"))})";
+    }
 }
 
 public class Filter<T> : Filter {

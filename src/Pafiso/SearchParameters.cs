@@ -115,4 +115,10 @@ public class SearchParameters {
             Filters = left.Filters.Concat(right.Filters).ToList()
         };
     }
+
+    public override string ToString() {
+        return $"Paging: {Paging?.ToString() ?? "---"}; " +
+               $"Sortings: {string.Join(" -> ", Sortings.Select(x => x.ToString()))}; " +
+               $"Filters: {string.Join(" AND ", Filters.Select(x => x.ToString()))}";
+    }
 }
