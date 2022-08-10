@@ -24,13 +24,13 @@ public class Sorting {
     }
 
     public IOrderedQueryable<T> ApplyToIQueryable<T>(IQueryable<T> query) {
-        var expr = ExpressionUtilities.BuildExpression<T,object>(PropertyName);
+        var expr = ExpressionUtilities.BuildLambdaExpression<T,object>(PropertyName);
 
         return Ascending ? query.OrderBy(expr) : query.OrderByDescending(expr);
     }
     
     public IOrderedQueryable<T> ThenApplyToIQueryable<T>(IOrderedQueryable<T> query) {
-        var expr = ExpressionUtilities.BuildExpression<T,object>(PropertyName);
+        var expr = ExpressionUtilities.BuildLambdaExpression<T,object>(PropertyName);
 
         return Ascending ? query.ThenBy(expr) : query.ThenByDescending(expr);
     }

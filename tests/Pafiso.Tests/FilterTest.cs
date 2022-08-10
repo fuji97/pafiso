@@ -10,6 +10,8 @@ public class FilterTest {
     private class Foo {
         public string Name { get; set; } = null!;
         public int Age { get; set; }
+        
+        public string? Description { get; set; }
     }
 
     private List<Foo> _foos = null!;
@@ -18,27 +20,13 @@ public class FilterTest {
     [SetUp]
     public void Setup() {
         _foos = new() {
-            new Foo { Name = "John", Age = 30 },
+            new Foo { Name = "John", Age = 30, Description = "This is a description" },
             new Foo { Name = "Jane", Age = 25 },
-            new Foo { Name = "Joe", Age = 20 },
-            new Foo { Name = "Jack", Age = 15 },
+            new Foo { Name = "Joe", Age = 20, Description = "This is another description"},
+            new Foo { Name = "Jack", Age = 15, Description = "And then, another description"},
             new Foo { Name = "Jill", Age = 10 },
         };
         _filter = new Filter(nameof(Foo.Age), FilterOperator.GreaterThanOrEquals, "20");
-    }
-
-    [Test]
-    public void Equal() {
-        var filterInsensitive = new Filter(nameof(Foo.Name), FilterOperator.Equals, "john");
-        var filterSensitive = new Filter(nameof(Foo.Name), FilterOperator.Equals, "john", true);
-        
-        var sensitiveFiltered = _foos.Where(filterSensitive).ToList();
-        var insensitiveFiltered = _foos.Where(filterInsensitive).ToList();
-        
-        Assert.AreEqual(1, insensitiveFiltered.Count);
-        Assert.AreEqual(_foos[0], insensitiveFiltered[0]);
-        
-        Assert.AreEqual(0, sensitiveFiltered.Count);
     }
 
     [Test]
@@ -50,5 +38,109 @@ public class FilterTest {
         filter.Operator.Should().Be(_filter.Operator);
         filter.Value.Should().Be(_filter.Value);
         filter.CaseSensitive.Should().Be(_filter.CaseSensitive);
+    }
+
+    [Test]
+    public void Equals() {
+        var filter = Filter.FromExpression<Foo>(x => x.Age == 20);
+        
+        var filtered = _foos.Where(filter).ToList();
+
+        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Age == 20));
+    }
+    
+    [Test]
+    public void EqualsCases() {
+        var filterInsensitive = new Filter(nameof(Foo.Name), FilterOperator.Equals, "john");
+        var filterSensitive = new Filter(nameof(Foo.Name), FilterOperator.Equals, "john", true);
+        
+        var sensitiveFiltered = _foos.Where(filterSensitive).ToList();
+        var insensitiveFiltered = _foos.Where(filterInsensitive).ToList();
+        
+        Assert.AreEqual(1, insensitiveFiltered.Count);
+        Assert.AreEqual(_foos[0], insensitiveFiltered[0]);
+        
+        Assert.AreEqual(0, sensitiveFiltered.Count);
+    }
+    
+    [Test]
+    public void NotEquals() {
+        var filter = Filter.FromExpression<Foo>(x => x.Age != 20);
+        
+        var filtered = _foos.Where(filter).ToList();
+
+        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Age != 20));
+    }
+    
+    [Test]
+    public void GreaterThan() {
+        var filter = Filter.FromExpression<Foo>(x => x.Age > 20);
+        
+        var filtered = _foos.Where(filter).ToList();
+
+        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Age > 20));
+    }
+
+    [Test]
+    public void LessThan() {
+        var filter = Filter.FromExpression<Foo>(x => x.Age < 20);
+        
+        var filtered = _foos.Where(filter).ToList();
+
+        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Age < 20));
+    }
+    
+    [Test]
+    public void GreaterThanOrEquals() {
+        var filter = Filter.FromExpression<Foo>(x => x.Age >= 20);
+        
+        var filtered = _foos.Where(filter).ToList();
+
+        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Age >= 20));
+    }
+    
+    [Test]
+    public void LessThanOrEquals() {
+        var filter = Filter.FromExpression<Foo>(x => x.Age <= 20);
+        
+        var filtered = _foos.Where(filter).ToList();
+
+        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Age <= 20));
+    }
+    
+    [Test]
+    public void Contains() {
+        var filter = new Filter(nameof(Foo.Name), FilterOperator.Contains, "o");
+        
+        var filtered = _foos.Where(filter).ToList();
+
+        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Name.Contains("o")));
+    }
+    
+    [Test]
+    public void NotContains() {
+        var filter = new Filter(nameof(Foo.Name), FilterOperator.NotContains, "o");
+        
+        var filtered = _foos.Where(filter).ToList();
+
+        filtered.Should().BeEquivalentTo(_foos.Where(x => !x.Name.Contains("o")));
+    }
+
+    [Test]
+    public void IsNull() {
+        var filter = Filter.FromExpression<Foo>(x => x.Description == null);
+        
+        var filtered = _foos.Where(filter).ToList();
+
+        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Description == null));
+    }
+    
+    [Test]
+    public void IsNotNull() {
+        var filter = Filter.FromExpression<Foo>(x => x.Description != null);
+        
+        var filtered = _foos.Where(filter).ToList();
+
+        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Description != null));
     }
 }

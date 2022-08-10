@@ -127,42 +127,44 @@ public class Filter {
     }
     
     public IQueryable<T> ApplyFilter<T>(IQueryable<T> query) {
-        var value = CaseSensitive ? Value : Value?.ToLower();
-
         var predicatesBuilder = PredicateBuilder.New<T>();
 
         foreach (var field in Fields) {
-            predicatesBuilder.Or(ApplyCorrectOperation<T>(this, field, value));
+            predicatesBuilder.Or(ApplyCorrectOperation<T>(this, field));
         }
 
         return query.Where(predicatesBuilder);
     }
     
-    private Expression<Func<T,bool>> ApplyCorrectOperation<T>(Filter filter, string field, string? value) {
-        switch (filter.Operator) {
-            case FilterOperator.Equals:
-                return (x => ExpressionUtilities.GetStringPropertyValue(x, field, filter.CaseSensitive) == value);
-            case FilterOperator.NotEquals:
-                return (x => ExpressionUtilities.GetStringPropertyValue(x, field, filter.CaseSensitive) != value);
-            case FilterOperator.GreaterThan:
-                return (x => float.Parse(ExpressionUtilities.GetStringPropertyValue(x, field, true)) > float.Parse(value!));    // TODO Correct null handling
-            case FilterOperator.LessThan:
-                return (x => float.Parse(ExpressionUtilities.GetStringPropertyValue(x, field, true)) <= float.Parse(value!));   // TODO Correct null handling
-            case FilterOperator.GreaterThanOrEquals:
-                return (x => float.Parse(ExpressionUtilities.GetStringPropertyValue(x, field, true)) > float.Parse(value!));    // TODO Correct null handling
-            case FilterOperator.LessThanOrEquals:
-                return (x => float.Parse(ExpressionUtilities.GetStringPropertyValue(x, field, true)) <= float.Parse(value!));   // TODO Correct null handling
-            case FilterOperator.Contains:
-                return (x => ExpressionUtilities.GetStringPropertyValue(x, field, filter.CaseSensitive).Contains(value!));  // TODO Correct null handling
-            case FilterOperator.NotContains:
-                return (x => !ExpressionUtilities.GetStringPropertyValue(x, field, filter.CaseSensitive).Contains(value!)); // TODO Correct null handling
-            case FilterOperator.Null:
-                return (x => ExpressionUtilities.GetPropertyValue(x, field) == null);
-            case FilterOperator.NotNull:
-                return (x => ExpressionUtilities.GetPropertyValue(x, field) != null);
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+    // private Expression<Func<T,bool>> ApplyCorrectOperation<T>(Filter filter, string field, string? value) {
+    //     switch (filter.Operator) {
+    //         case FilterOperator.Equals:
+    //             return (x => ExpressionUtilities.GetStringPropertyValue(x, field, filter.CaseSensitive) == value);
+    //         case FilterOperator.NotEquals:
+    //             return (x => ExpressionUtilities.GetStringPropertyValue(x, field, filter.CaseSensitive) != value);
+    //         case FilterOperator.GreaterThan:
+    //             return (x => float.Parse(ExpressionUtilities.GetStringPropertyValue(x, field, true)) > float.Parse(value!));    // TODO Correct null handling
+    //         case FilterOperator.LessThan:
+    //             return (x => float.Parse(ExpressionUtilities.GetStringPropertyValue(x, field, true)) < float.Parse(value!));   // TODO Correct null handling
+    //         case FilterOperator.GreaterThanOrEquals:
+    //             return (x => float.Parse(ExpressionUtilities.GetStringPropertyValue(x, field, true)) >= float.Parse(value!));    // TODO Correct null handling
+    //         case FilterOperator.LessThanOrEquals:
+    //             return (x => float.Parse(ExpressionUtilities.GetStringPropertyValue(x, field, true)) <= float.Parse(value!));   // TODO Correct null handling
+    //         case FilterOperator.Contains:
+    //             return (x => ExpressionUtilities.GetStringPropertyValue(x, field, filter.CaseSensitive).Contains(value!));  // TODO Correct null handling
+    //         case FilterOperator.NotContains:
+    //             return (x => !ExpressionUtilities.GetStringPropertyValue(x, field, filter.CaseSensitive).Contains(value!)); // TODO Correct null handling
+    //         case FilterOperator.Null:
+    //             return (x => ExpressionUtilities.GetPropertyValue(x, field) == null);
+    //         case FilterOperator.NotNull:
+    //             return (x => ExpressionUtilities.GetPropertyValue(x, field) != null);
+    //         default:
+    //             throw new ArgumentOutOfRangeException();
+    //     }
+    // }
+    
+    private Expression<Func<T,bool>> ApplyCorrectOperation<T>(Filter filter, string field) {
+        return ExpressionUtilities.BuildFilterExpression<T>(field, "x", filter.Operator, filter.Value, filter.CaseSensitive);
     }
 
     public override string ToString() {

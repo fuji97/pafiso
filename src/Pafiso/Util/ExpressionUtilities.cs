@@ -90,15 +90,105 @@ public static class ExpressionUtilities {
     /// <typeparam name="T"></typeparam>
     /// <typeparam name="TResult"></typeparam>
     /// <returns></returns>
-    public static Expression<Func<T,TResult>> BuildExpression<T,TResult> (string propName, string paramName = "x") {
+    public static Expression<Func<T,TResult>> BuildLambdaExpression<T,TResult> (string propName, string paramName = "x") {
+        var (param, body) = ParameterExpression<T, TResult>(propName, paramName);
+        if (body.Type != typeof(TResult)) {
+            body = Expression.Convert(body, typeof(TResult));
+        }
+        return Expression.Lambda<Func<T,TResult>>(body, param);
+    }
+    private static (ParameterExpression param, Expression body) ParameterExpression<T, TResult>(string propName, string paramName) {
         var param = Expression.Parameter(typeof(T), paramName);
         Expression body = param;
         foreach (var member in propName.Split('.')) {
             body = Expression.PropertyOrField(body, member);
         }
-        if (body.Type != typeof(TResult)) {
-            body = Expression.Convert(body, typeof(TResult));
+        return (param, body);
+    }
+    
+    private static Expression BuildContainsExpression<T>(Expression memberExpression, string? value, bool contains) {
+        if (value == null) {
+            return Expression.Constant(false);
         }
-        return Expression.Lambda<Func<T,TResult>>(body, param);
+        
+        var valueParam = Expression.Constant(value);
+        
+        if (memberExpression.Type != typeof(string)) {
+            memberExpression = Expression.Convert(memberExpression, typeof(string));
+        }
+        
+        var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) })!;
+        var methodCallExpression = Expression.Call(memberExpression, containsMethod, valueParam);
+        if (contains) {
+            return methodCallExpression;
+        }
+        else {
+            return Expression.Not(methodCallExpression);
+        }
+    }
+    
+    private static Expression BuildComparisonExpression<TValue>(Expression memberExpression, FilterOperator op, TValue value, bool caseSensitive) {
+        switch (op) {
+            case FilterOperator.Contains:
+                return BuildContainsExpression<TValue>(memberExpression, value?.ToString(), true);
+            case FilterOperator.NotContains:
+                return BuildContainsExpression<TValue>(memberExpression, value?.ToString(), false);
+            case FilterOperator.Null:
+                return Expression.ReferenceEqual(memberExpression, Expression.Constant(null));
+            case FilterOperator.NotNull:
+                return Expression.Not(Expression.ReferenceEqual(memberExpression, Expression.Constant(null)));
+        }
+
+        var valueExpression = Expression.Constant(value);
+        if (memberExpression.Type != typeof(TValue)) {
+            memberExpression = Expression.Convert(memberExpression, typeof(TValue));
+        }
+        if (typeof(TValue) == typeof(string) && !caseSensitive) {
+            memberExpression = Expression.Call(memberExpression, nameof(string.ToLower), Type.EmptyTypes);
+        }
+        
+
+        switch (op) {
+            case FilterOperator.Equals:
+                return Expression.Equal(memberExpression, valueExpression);
+            case FilterOperator.NotEquals:
+                return Expression.NotEqual(memberExpression, valueExpression);
+            case FilterOperator.GreaterThan:
+                return Expression.GreaterThan(memberExpression, valueExpression);
+            case FilterOperator.LessThan:
+                return Expression.LessThan(memberExpression, valueExpression);
+            case FilterOperator.GreaterThanOrEquals:
+                return Expression.GreaterThanOrEqual(memberExpression, valueExpression);
+            case FilterOperator.LessThanOrEquals:
+                return Expression.LessThanOrEqual(memberExpression, valueExpression);
+        }
+        
+        throw new ArgumentOutOfRangeException(nameof(op), op, null);
+    }
+
+    public static Expression<Func<T,bool>> BuildFilterExpression<T>(string propName, string paramName, FilterOperator op, string? value, bool caseSensitive) {
+        var (param, body) = ParameterExpression<T, bool>(propName, paramName);
+
+        if (!caseSensitive) {
+            value = value?.ToLower();
+        }
+        Expression comparison;
+        if (value == null) {
+            comparison = BuildComparisonExpression(body, op, value, false);
+        } 
+        else if (float.TryParse(value, out var floatValue)) {
+            comparison = BuildComparisonExpression(body, op, floatValue, false);
+        }
+        else if (bool.TryParse(value, out var boolValue)) {
+            comparison = BuildComparisonExpression(body, op, boolValue, false);
+        }
+        else if (long.TryParse(value, out var longValue)) {
+            comparison = BuildComparisonExpression(body, op, longValue, false);
+        }
+        else {
+            comparison = BuildComparisonExpression(body, op, value, caseSensitive);
+        }
+        
+        return Expression.Lambda<Func<T,bool>>(comparison, param);
     }
 }
