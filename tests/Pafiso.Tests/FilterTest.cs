@@ -110,7 +110,7 @@ public class FilterTest {
     
     [Test]
     public void Contains() {
-        var filter = new Filter(nameof(Foo.Name), FilterOperator.Contains, "o");
+        var filter = Filter.FromExpression<Foo>(x => x.Name.Contains("o"));
         
         var filtered = _foos.Where(filter).ToList();
 
@@ -119,7 +119,7 @@ public class FilterTest {
     
     [Test]
     public void NotContains() {
-        var filter = new Filter(nameof(Foo.Name), FilterOperator.NotContains, "o");
+        var filter = Filter.FromExpression<Foo>(x => !x.Name.Contains("o"));
         
         var filtered = _foos.Where(filter).ToList();
 

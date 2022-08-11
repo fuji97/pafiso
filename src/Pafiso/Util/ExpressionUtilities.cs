@@ -34,6 +34,77 @@ public static class ExpressionUtilities {
         var getter = getterLambda.Compile();
         return getter() ?? throw new InvalidOperationException();
     }
+
+    public static string? GetExpressionValue(Expression expr) {
+        string? value;
+        
+        if (expr is ConstantExpression constantExpression) {
+            value = constantExpression.Value?.ToString();
+        } else if (expr is MemberExpression rightMember) {
+            value = GetValue(rightMember).ToString();
+        } else {
+            throw new InvalidOperationException("Invalid expression");
+        }
+
+        return value;
+    }
+
+    public static (string path, FilterOperator op, string? value) DecomposeMethodCallExpression(MethodCallExpression expr) {
+        if (expr.Object == null) {
+            throw new InvalidOperationException("The method must be called on an object. Static method calls are not supported.");
+        }
+        var path = ExpressionDecomposer(expr.Object);
+        switch (expr.Method.Name) {
+                case "Contains":
+                    var value = GetMethodArgumentValues(expr).FirstOrDefault();
+                    return (path, FilterOperator.Contains, value);
+        }
+        throw new InvalidOperationException("Unsupported expression");
+    }
+
+    public static (string path, FilterOperator op, string? value) DecomposeUnaryWrapperExpression(UnaryExpression expr) {
+        var methodExpression = expr.Operand as MethodCallExpression;
+        if (methodExpression == null) {
+            throw new InvalidOperationException("Unsupported expression");
+        }
+        var (path, op, value) = DecomposeMethodCallExpression(methodExpression);
+        switch (expr.NodeType) {
+            case ExpressionType.Not:
+                switch (op) {
+                    case FilterOperator.Contains:
+                        return (path, FilterOperator.NotContains, value);
+                }
+                break;
+        }
+        throw new InvalidOperationException("Unsupported expression");
+    }
+    
+    public static IEnumerable<string> GetMethodArgumentValues(MethodCallExpression expr) {
+        return expr.Arguments.Select(GetExpressionValue).Where(x => x != null).Cast<string>();
+    }
+
+    public static FilterOperator ToFilterOperator(this ExpressionType type, string? value) {
+        var operatorName = type switch {
+            ExpressionType.Equal => FilterOperator.Equals,
+            ExpressionType.NotEqual => FilterOperator.NotEquals,
+            ExpressionType.GreaterThan => FilterOperator.GreaterThan,
+            ExpressionType.GreaterThanOrEqual => FilterOperator.GreaterThanOrEquals,
+            ExpressionType.LessThan => FilterOperator.LessThan,
+            ExpressionType.LessThanOrEqual => FilterOperator.LessThanOrEquals,
+            _ => throw new InvalidOperationException("Expression must be a binary expression")
+        };
+        
+        // Convert to null check if value is null and operator is equals or not equals
+        if (value == null) {
+            operatorName = operatorName switch {
+                FilterOperator.Equals => FilterOperator.Null,
+                FilterOperator.NotEquals => FilterOperator.NotNull,
+                _ => operatorName
+            };
+        }
+
+        return operatorName;
+    }
     
     /// <summary>
     /// Obtain value from nester property values.

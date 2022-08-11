@@ -56,41 +56,33 @@ public class Filter {
     }
     
     public static Filter FromExpression<T>(Expression<Func<T,bool>> expression) {
-        var binaryExpression = expression.Body as BinaryExpression;
-        if (binaryExpression == null) {
-            throw new InvalidOperationException("Expression must be a binary expression");
-        }
-        var field = ExpressionUtilities.ExpressionDecomposer(binaryExpression.Left);
+        if (expression.Body is BinaryExpression binaryExpression) {
+            var field = ExpressionUtilities.ExpressionDecomposer(binaryExpression.Left);
 
-        string? value;
-        if (binaryExpression.Right is ConstantExpression constantExpression) {
-            value = constantExpression.Value?.ToString();
-        } else if (binaryExpression.Right is MemberExpression rightMember) {
-            value = ExpressionUtilities.GetValue(rightMember).ToString();
-        } else {
-            throw new InvalidOperationException("Invalid right expression");
+            string? value;
+            try {
+                value = ExpressionUtilities.GetExpressionValue(binaryExpression.Right);
+            }
+            catch (InvalidOperationException e) {
+                throw new InvalidOperationException($"Expression must be a binary expression with a constant value on the right side. {e.Message}");
+            }
+        
+            var operatorName = binaryExpression.NodeType.ToFilterOperator(value);
+        
+            return new Filter(field, operatorName, value);
+        } 
+        
+        if (expression.Body is UnaryExpression unaryExpression) {
+            var (path, op, value) = ExpressionUtilities.DecomposeUnaryWrapperExpression(unaryExpression);
+            return new Filter(path, op, value);
         }
         
-        var operatorType = binaryExpression.NodeType;
-        var operatorName = operatorType switch {
-            ExpressionType.Equal => FilterOperator.Equals,
-            ExpressionType.NotEqual => FilterOperator.NotEquals,
-            ExpressionType.GreaterThan => FilterOperator.GreaterThan,
-            ExpressionType.GreaterThanOrEqual => FilterOperator.GreaterThanOrEquals,
-            ExpressionType.LessThan => FilterOperator.LessThan,
-            ExpressionType.LessThanOrEqual => FilterOperator.LessThanOrEquals,
-            _ => throw new InvalidOperationException("Expression must be a binary expression")
-        };
-        
-        // Convert to null check if value is null and operator is equals or not equals
-        if (value == null) {
-            operatorName = operatorName switch {
-                FilterOperator.Equals => FilterOperator.Null,
-                FilterOperator.NotEquals => FilterOperator.NotNull,
-                _ => operatorName
-            };
+        if (expression.Body is MethodCallExpression methodCallExpression) {
+            var (path, op, value) = ExpressionUtilities.DecomposeMethodCallExpression(methodCallExpression);
+            return new Filter(path, op, value);
         }
-        return new Filter(field, operatorName, value);
+        
+        throw new InvalidOperationException("Unsupported expression");
     }
 
     public IDictionary<string, string> ToDictionary() {
