@@ -55,7 +55,7 @@ public class Filter {
         return !left.Equals(right);
     }
     
-    public static Filter FromExpression<T>(Expression<Func<T,bool>> expression) {
+    public static Filter<T> FromExpression<T>(Expression<Func<T,bool>> expression) {
         if (expression.Body is BinaryExpression binaryExpression) {
             var field = ExpressionUtilities.ExpressionDecomposer(binaryExpression.Left);
 
@@ -69,17 +69,17 @@ public class Filter {
         
             var operatorName = binaryExpression.NodeType.ToFilterOperator(value);
         
-            return new Filter(field, operatorName, value);
+            return new Filter<T>(field, operatorName, value);
         } 
         
         if (expression.Body is UnaryExpression unaryExpression) {
             var (path, op, value) = ExpressionUtilities.DecomposeUnaryWrapperExpression(unaryExpression);
-            return new Filter(path, op, value);
+            return new Filter<T>(path, op, value);
         }
         
         if (expression.Body is MethodCallExpression methodCallExpression) {
             var (path, op, value) = ExpressionUtilities.DecomposeMethodCallExpression(methodCallExpression);
-            return new Filter(path, op, value);
+            return new Filter<T>(path, op, value);
         }
         
         throw new InvalidOperationException("Unsupported expression");
@@ -180,10 +180,5 @@ public class Filter<T> : Filter {
     public Filter<T> AddField(Expression<Func<T,object>> fieldExpression) {
         AddField<T>(fieldExpression);
         return this;
-    }
-
-    public static Filter<T> FromExpression(Expression<Func<T,bool>> expression) {
-        var genericFilter = Filter.FromExpression(expression);
-        return new Filter<T>(genericFilter.Fields, genericFilter.Operator, genericFilter.Value, genericFilter.CaseSensitive);
     }
 }

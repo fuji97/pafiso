@@ -44,7 +44,7 @@ public class SortingTest {
 
     [Test]
     public void CreateFromTypedExpression() {
-        var sort = Sorting<Foo>.FromExpression(x => x.Name, SortOrder.Ascending);
+        var sort = Sorting.FromExpression<Foo>(x => x.Name, SortOrder.Ascending);
         
         var orderedList = _foos.OrderBy(sort).ToList();
         
@@ -54,7 +54,7 @@ public class SortingTest {
 
     [Test]
     public void SortByNestedProperties() {
-        var sort = Sorting<Foo>.FromExpression(x => x.Bar.Id, SortOrder.Ascending);
+        var sort = Sorting.FromExpression<Foo>(x => x.Bar.Id, SortOrder.Ascending);
         
         var orderedList = _foos.OrderBy(sort).ToList();
         

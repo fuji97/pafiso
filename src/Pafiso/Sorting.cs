@@ -18,9 +18,9 @@ public class Sorting {
         SortOrder = sortOrder;
     }
 
-    public static Sorting FromExpression<T>(Expression<Func<T, object>> expr, SortOrder order) {
+    public static Sorting<T> FromExpression<T>(Expression<Func<T, object>> expr, SortOrder order) {
         var field = ExpressionUtilities.ExpressionDecomposer(expr.Body);
-        return new Sorting(field, order);
+        return new Sorting<T>(field, order);
     }
 
     public IOrderedQueryable<T> ApplyToIQueryable<T>(IQueryable<T> query) {
@@ -74,11 +74,4 @@ public class Sorting {
 public class Sorting<T> : Sorting {
     public Sorting(string propertyName, SortOrder sortOrder) : base(propertyName, sortOrder) {
     }
-    
-    public static Sorting<T> FromExpression(Expression<Func<T, object>> expr, SortOrder order) {
-        var field = ExpressionUtilities.ExpressionDecomposer(expr.Body);
-        return new Sorting<T>(field, order);
-    }
-    
-    
 }
