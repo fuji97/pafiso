@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using FluentAssertions;
 using NUnit.Framework;
 
 namespace Pafiso.Tests; 
@@ -35,5 +36,18 @@ public class SearchParameterTest {
         var dictionary = _searchParameters.ToDictionary();
         var searchParameters = SearchParameters.FromDictionary(dictionary);
         Assert.AreEqual(_searchParameters, searchParameters);
+    }
+    
+    [Test]
+    public void RemoveDuplicateSortings() {
+        _searchParameters.Sortings.Add(new Sorting("Name", SortOrder.Descending));
+        _searchParameters.Sortings.Add(new Sorting("Age", SortOrder.Ascending));
+
+        var dictionary = _searchParameters.ToDictionary();
+        var searchParameters = SearchParameters.FromDictionary(dictionary);
+        searchParameters.Sortings.Should()
+            .HaveCount(2)
+            .And.ContainEquivalentOf(_searchParameters.Sortings[0])
+            .And.ContainEquivalentOf(_searchParameters.Sortings[1]);
     }
 }
