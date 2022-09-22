@@ -177,7 +177,7 @@ public static class ExpressionUtilities {
         return (param, body);
     }
     
-    private static Expression BuildContainsExpression<T>(Expression memberExpression, string? value, bool contains) {
+    private static Expression BuildContainsExpression<T>(Expression memberExpression, string? value, bool contains, bool caseSensitive) {
         if (value == null) {
             return Expression.Constant(false);
         }
@@ -189,6 +189,10 @@ public static class ExpressionUtilities {
         }
         
         var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) })!;
+        if (!caseSensitive) {
+            var lowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!;
+            memberExpression = Expression.Call(memberExpression, lowerMethod);
+        }
         var methodCallExpression = Expression.Call(memberExpression, containsMethod, valueParam);
         if (contains) {
             return methodCallExpression;
@@ -201,9 +205,9 @@ public static class ExpressionUtilities {
     private static Expression BuildComparisonExpression<TValue>(Expression memberExpression, FilterOperator op, TValue value, bool caseSensitive) {
         switch (op) {
             case FilterOperator.Contains:
-                return BuildContainsExpression<TValue>(memberExpression, value?.ToString(), true);
+                return BuildContainsExpression<TValue>(memberExpression, value?.ToString(), true, caseSensitive);
             case FilterOperator.NotContains:
-                return BuildContainsExpression<TValue>(memberExpression, value?.ToString(), false);
+                return BuildContainsExpression<TValue>(memberExpression, value?.ToString(), false, caseSensitive);
             case FilterOperator.Null:
                 return Expression.ReferenceEqual(memberExpression, Expression.Constant(null));
             case FilterOperator.NotNull:
