@@ -3,7 +3,7 @@
 namespace Pafiso; 
 
 public class Paging {
-    private const int StartingPage = 1;
+    private const int StartingPage = 0;
     
     public int Take { get; private init; }
     public int Skip { get; private init; }

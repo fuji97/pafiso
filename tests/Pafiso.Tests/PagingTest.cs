@@ -9,9 +9,9 @@ namespace Pafiso.Tests;
 public class PagingTest {
     [Test]
     public void FromPaging() {
-        var paging = Paging.FromPaging(3, 10);
+        var paging = Paging.FromPaging(2, 10);
         
-        Assert.AreEqual(3, paging.Page);
+        Assert.AreEqual(2, paging.Page);
         Assert.AreEqual(10, paging.PageSize);
         Assert.AreEqual(20, paging.Skip);
         Assert.AreEqual(10, paging.Take);
@@ -21,7 +21,7 @@ public class PagingTest {
     public void FromSkipTake() {
         var paging = Paging.FromSkipTake(20, 10);
         
-        Assert.AreEqual(3, paging.Page);
+        Assert.AreEqual(2, paging.Page);
         Assert.AreEqual(10, paging.PageSize);
         Assert.AreEqual(20, paging.Skip);
         Assert.AreEqual(10, paging.Take);
@@ -29,7 +29,7 @@ public class PagingTest {
 
     [Test]
     public void SerializeAndDeserialize() {
-        var paging = Paging.FromPaging(3, 10);
+        var paging = Paging.FromPaging(2, 10);
         var json = JsonSerializer.Serialize(paging);
         var paging2 = JsonSerializer.Deserialize<Paging>(json);
 
@@ -44,7 +44,7 @@ public class PagingTest {
     public void ApplyPagination() {
         var samples = Enumerable.Range(0, 100).ToList();
         
-        var paging = Paging.FromPaging(3, 10);
+        var paging = Paging.FromPaging(2, 10);
         
         var result = samples.Paging(paging).ToList();
         
