@@ -46,8 +46,9 @@ public class SearchParameters {
                 query = query.Where(filter);
 
         if (Sortings.Any()) {
-            var orderedQuery = query.OrderBy(Sortings.First());
-            query = Sortings.Skip(1).Aggregate(orderedQuery,
+            var distinctSortings = Sortings.DistinctBy(x => x.PropertyName).ToArray();
+            var orderedQuery = query.OrderBy(distinctSortings.First());
+            query = distinctSortings.Skip(1).Aggregate(orderedQuery,
                 (current, sorting) => current.ThenBy(sorting));
         }
 
@@ -61,7 +62,7 @@ public class SearchParameters {
     public IDictionary<string, string> ToDictionary() {
         var dicts = new List<IDictionary<string, string>>() {
             QueryStringHelpers.MergeListOfQueryStrings("sortings",
-                Sortings.Select(s => s.ToDictionary())),
+                Sortings.DistinctBy(x => x.PropertyName).Select(s => s.ToDictionary())),    // Remove duplicates
             QueryStringHelpers.MergeListOfQueryStrings("filters",
                 Filters.Select(f => f.ToDictionary())),
             Paging?.ToDictionary() ?? new Dictionary<string, string>()
