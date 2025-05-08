@@ -3,15 +3,19 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PackageVersion></PackageVersion>
     <Title>Pafiso</Title>
     <Authors>Fuji97</Authors>
     <Description>A library to serialize, deserialize and apply Paging, Filtering and Sorting</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/fuji97/pafiso</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/fuji97/pafiso/blob/main/LICENSE</PackageLicenseUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/fuji97/pafiso</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="LinqKit" Version="1.3.8" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 </Project>
+
