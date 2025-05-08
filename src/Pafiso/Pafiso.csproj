@@ -3,7 +3,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PackageVersion>1.8.3</PackageVersion>
+    <PackageVersion></PackageVersion>
     <Title>Pafiso</Title>
     <Authors>Fuji97</Authors>
     <Description>A library to serialize, deserialize and apply Paging, Filtering and Sorting</Description>
