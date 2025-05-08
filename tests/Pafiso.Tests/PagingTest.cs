@@ -11,20 +11,20 @@ public class PagingTest {
     public void FromPaging() {
         var paging = Paging.FromPaging(2, 10);
         
-        Assert.AreEqual(2, paging.Page);
-        Assert.AreEqual(10, paging.PageSize);
-        Assert.AreEqual(20, paging.Skip);
-        Assert.AreEqual(10, paging.Take);
+        paging.Page.Should().Be(2);
+        paging.PageSize.Should().Be(10);
+        paging.Skip.Should().Be(20);
+        paging.Take.Should().Be(10);
     }
     
     [Test]
     public void FromSkipTake() {
         var paging = Paging.FromSkipTake(20, 10);
         
-        Assert.AreEqual(2, paging.Page);
-        Assert.AreEqual(10, paging.PageSize);
-        Assert.AreEqual(20, paging.Skip);
-        Assert.AreEqual(10, paging.Take);
+        paging.Page.Should().Be(2);
+        paging.PageSize.Should().Be(10);
+        paging.Skip.Should().Be(20);
+        paging.Take.Should().Be(10);
     }
 
     [Test]
@@ -48,7 +48,8 @@ public class PagingTest {
         
         var result = samples.Paging(paging).ToList();
         
-        Assert.AreEqual(10, result.Count);
-        Assert.That(result, Is.EquivalentTo(samples.Skip(20).Take(10)));
+        result.Count.Should().Be(10);
+        result.Should().BeEquivalentTo(samples.Skip(20).Take(10));
     }
 }
+

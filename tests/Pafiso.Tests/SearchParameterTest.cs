@@ -25,17 +25,17 @@ public class SearchParameterTest {
     [Test]
     public void ToDictionary() {
         var dictionary = _searchParameters.ToDictionary();
-        Assert.AreEqual(13, dictionary.Count);
-        Assert.AreEqual("Age", dictionary["filters[1][fields]"]);
-        Assert.AreEqual(SortOrder.Ascending.ToString(), dictionary["sortings[0][ord]"]);
-        Assert.AreEqual("10", dictionary["take"]);
+        dictionary.Count.Should().Be(13);
+        dictionary["filters[1][fields]"].Should().Be("Age");
+        dictionary["sortings[0][ord]"].Should().Be(nameof(SortOrder.Ascending));
+        dictionary["take"].Should().Be("10");
     }
 
     [Test]
     public void FromDictionary() {
         var dictionary = _searchParameters.ToDictionary();
         var searchParameters = SearchParameters.FromDictionary(dictionary);
-        Assert.AreEqual(_searchParameters, searchParameters);
+        searchParameters.Should().BeEquivalentTo(_searchParameters);
     }
     
     [Test]
@@ -51,3 +51,4 @@ public class SearchParameterTest {
             .And.ContainEquivalentOf(_searchParameters.Sortings[1]);
     }
 }
+

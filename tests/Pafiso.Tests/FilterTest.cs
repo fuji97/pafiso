@@ -59,10 +59,10 @@ public class FilterTest {
         var sensitiveFiltered = _foos.Where(filterSensitive).ToList();
         var insensitiveFiltered = _foos.Where(filterInsensitive).ToList();
         
-        Assert.AreEqual(1, insensitiveFiltered.Count);
-        Assert.AreEqual(_foos[0], insensitiveFiltered[0]);
+        insensitiveFiltered.Count.Should().Be(1);
+        insensitiveFiltered[0].Should().Be(_foos[0]);
         
-        Assert.AreEqual(0, sensitiveFiltered.Count);
+        sensitiveFiltered.Count.Should().Be(0);
     }
     
     [Test]
@@ -173,3 +173,4 @@ public class FilterTest {
         filtered.Should().BeEquivalentTo(_foos.Where(x => x.Name.ToLower().Contains("john")));
     }
 }
+

@@ -1,8 +1,8 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pafiso", "src\Pafiso\Pafiso.csproj", "{1C48A12F-F2EF-460F-87E1-8DF904FFC7FB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Pafiso", "src\Pafiso\Pafiso.csproj", "{1C48A12F-F2EF-460F-87E1-8DF904FFC7FB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pafiso.Tests", "tests\Pafiso.Tests\Pafiso.Tests.csproj", "{C7D8EE9E-34BD-4A18-8E33-D190A07A02BB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Pafiso.Tests", "tests\Pafiso.Tests\Pafiso.Tests.csproj", "{C7D8EE9E-34BD-4A18-8E33-D190A07A02BB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
