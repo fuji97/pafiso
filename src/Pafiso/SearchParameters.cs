@@ -6,8 +6,8 @@ namespace Pafiso;
 [Serializable]
 public class SearchParameters {
     protected Paging? _paging = null;
-    protected List<Sorting> _sortings = new();
-    protected List<Filter> _filters = new();
+    protected List<Sorting> _sortings = [];
+    protected List<Filter> _filters = [];
 
 
     public Paging? Paging {
@@ -80,8 +80,8 @@ public class SearchParameters {
         var filters = splitted.ContainsKey("filters") ? splitted["filters"].Select(Filter.FromDictionary) : null;
         return new SearchParameters {
             Paging = paging,
-            Sortings = sorting?.ToList() ?? new List<Sorting>(),
-            Filters = filters?.ToList() ?? new List<Filter>()
+            Sortings = sorting?.ToList() ?? [],
+            Filters = filters?.ToList() ?? []
         };
     }
 

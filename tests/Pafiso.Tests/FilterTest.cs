@@ -21,13 +21,17 @@ public class FilterTest {
     
     [SetUp]
     public void Setup() {
-        _foos = new() {
-            new Foo { Name = "John", Age = 30, Description = "This is a description", SubFoo = new SubFoo("Helo", 10)},
+        _foos = [
+            new Foo { Name = "John", Age = 30, Description = "This is a description", SubFoo = new SubFoo("Helo", 10) },
             new Foo { Name = "Jane", Age = 25, SubFoo = new SubFoo("Jj", 12) },
-            new Foo { Name = "Joe", Age = 20, Description = "This is another description", SubFoo = new SubFoo("Jo", 14)},
-            new Foo { Name = "Jack", Age = 15, Description = "And then, another description", SubFoo = new SubFoo("Jak", 15)},
-            new Foo { Name = "Jill", Age = 10, SubFoo = new SubFoo("Jil", 16) },
-        };
+            new Foo {
+                Name = "Joe", Age = 20, Description = "This is another description", SubFoo = new SubFoo("Jo", 14)
+            },
+            new Foo {
+                Name = "Jack", Age = 15, Description = "And then, another description", SubFoo = new SubFoo("Jak", 15)
+            },
+            new Foo { Name = "Jill", Age = 10, SubFoo = new SubFoo("Jil", 16) }
+        ];
         _filter = new Filter(nameof(Foo.Age), FilterOperator.GreaterThanOrEquals, "20");
     }
 
@@ -112,20 +116,20 @@ public class FilterTest {
     
     [Test]
     public void Contains() {
-        var filter = Filter.FromExpression<Foo>(x => x.Name.Contains("o"));
+        var filter = Filter.FromExpression<Foo>(x => x.Name.Contains('o'));
         
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Name.Contains("o")));
+        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Name.Contains('o')));
     }
     
     [Test]
     public void NotContains() {
-        var filter = Filter.FromExpression<Foo>(x => !x.Name.Contains("o"));
+        var filter = Filter.FromExpression<Foo>(x => !x.Name.Contains('o'));
         
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => !x.Name.Contains("o")));
+        filtered.Should().BeEquivalentTo(_foos.Where(x => !x.Name.Contains('o')));
     }
 
     [Test]
@@ -148,20 +152,20 @@ public class FilterTest {
 
     [Test]
     public void NestedContains() {
-        var filter = Filter.FromExpression<Foo>(x => x.SubFoo.SubName.Contains("o"));
+        var filter = Filter.FromExpression<Foo>(x => x.SubFoo.SubName.Contains('o'));
         
         var filtered = _foos.Where(filter).ToList();
         
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.SubFoo.SubName.Contains("o")));
+        filtered.Should().BeEquivalentTo(_foos.Where(x => x.SubFoo.SubName.Contains('o')));
     }
 
     [Test]
     public void MultipleFields() {
-        var filter = Filter.FromExpression<Foo>(x => x.Name.Contains("o")).AddField(x => x.SubFoo.SubName);
+        var filter = Filter.FromExpression<Foo>(x => x.Name.Contains('o')).AddField(x => x.SubFoo.SubName);
         
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Name.Contains("o") || x.SubFoo.SubName.Contains("o")));
+        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Name.Contains('o') || x.SubFoo.SubName.Contains('o')));
     }
 
     [Test]

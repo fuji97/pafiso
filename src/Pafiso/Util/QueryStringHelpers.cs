@@ -31,11 +31,11 @@ public static class QueryStringHelpers {
             var itemKey = match.Groups[3].Value;
 
             IDictionary<int, IDictionary<string,string>> dc;
-            if (!result.ContainsKey(listKey)) {
+            if (!result.TryGetValue(listKey, out var existingDictionary)) {
                 dc = new Dictionary<int, IDictionary<string,string>>();
                 result[listKey] = dc;
             } else {
-                dc = result[listKey];
+                dc = existingDictionary;
             }
             if (dc.TryGetValue(index, out var item)) {
                 item[itemKey] = value;

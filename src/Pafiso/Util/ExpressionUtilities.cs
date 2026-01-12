@@ -4,23 +4,28 @@ namespace Pafiso.Util;
 
 public static class ExpressionUtilities {
     public static string ExpressionDecomposer(Expression expr) {
-        if (expr is MemberExpression member) {
-            var field = member.Member.Name;
+        while (true) {
+            switch (expr) {
+                case MemberExpression member: {
+                    var field = member.Member.Name;
 
-            if (member.Expression is MemberExpression memberExpression) {
-                return $"{ExpressionDecomposer(memberExpression)}.{field}";
+                    if (member.Expression is MemberExpression memberExpression) {
+                        return $"{ExpressionDecomposer(memberExpression)}.{field}";
+                    }
+
+                    return field;
+                }
+                case UnaryExpression unary:
+                    expr = unary.Operand;
+                    continue;
+                default:
+                    throw new ArgumentException("Expression must be a member or unary expression");
             }
-            
-            return field;
+
+            break;
         }
-        
-        if (expr is UnaryExpression unary) {
-            return ExpressionDecomposer(unary.Operand);
-        }
-        
-        throw new ArgumentException("Expression must be a member or unary expression");
     }
-    
+
     public static object GetValue(MemberExpression member) {
         var objectMember = Expression.Convert(member, typeof(object));
         var getterLambda = Expression.Lambda<Func<object>>(objectMember);
@@ -36,15 +41,11 @@ public static class ExpressionUtilities {
     }
 
     public static string? GetExpressionValue(Expression expr) {
-        string? value;
-        
-        if (expr is ConstantExpression constantExpression) {
-            value = constantExpression.Value?.ToString();
-        } else if (expr is MemberExpression rightMember) {
-            value = GetValue(rightMember).ToString();
-        } else {
-            throw new InvalidOperationException("Invalid expression");
-        }
+        var value = expr switch {
+            ConstantExpression constantExpression => constantExpression.Value?.ToString(),
+            MemberExpression rightMember => GetValue(rightMember).ToString(),
+            _ => throw new InvalidOperationException("Invalid expression")
+        };
 
         return value;
     }
@@ -122,7 +123,7 @@ public static class ExpressionUtilities {
 
         if(propName.Contains('.')) //complex type nested
         {
-            var temp = propName.Split(new char[] { '.' }, 2);
+            var temp = propName.Split(['.'], 2);
             return GetPropertyValue(GetPropertyValue(src, temp[0]), temp[1]);
         }
         else {
@@ -188,7 +189,7 @@ public static class ExpressionUtilities {
             memberExpression = Expression.Convert(memberExpression, typeof(string));
         }
         
-        var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) })!;
+        var containsMethod = typeof(string).GetMethod(nameof(string.Contains), [typeof(string)])!;
         if (!caseSensitive) {
             var lowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!;
             memberExpression = Expression.Call(memberExpression, lowerMethod);

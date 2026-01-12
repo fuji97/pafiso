@@ -5,18 +5,13 @@ using Pafiso.Util;
 
 namespace Pafiso;
 
-public class Sorting {
-    public string PropertyName { get; }
-    public SortOrder SortOrder { get;}
-    
+[method: JsonConstructor]
+public class Sorting(string propertyName, SortOrder sortOrder) {
+    public string PropertyName { get; } = propertyName;
+    public SortOrder SortOrder { get;} = sortOrder;
+
     public bool Ascending => SortOrder == SortOrder.Ascending;
     public bool Descending => SortOrder == SortOrder.Descending;
-    
-    [JsonConstructor]
-    public Sorting(string propertyName, SortOrder sortOrder) {
-        PropertyName = propertyName;
-        SortOrder = sortOrder;
-    }
 
     public static Sorting<T> FromExpression<T>(Expression<Func<T, object>> expr, SortOrder order) {
         var field = ExpressionUtilities.ExpressionDecomposer(expr.Body);
@@ -71,7 +66,4 @@ public class Sorting {
     }
 }
 
-public class Sorting<T> : Sorting {
-    public Sorting(string propertyName, SortOrder sortOrder) : base(propertyName, sortOrder) {
-    }
-}
+public class Sorting<T>(string propertyName, SortOrder sortOrder) : Sorting(propertyName, sortOrder);

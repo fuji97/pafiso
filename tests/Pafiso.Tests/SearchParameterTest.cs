@@ -10,15 +10,15 @@ public class SearchParameterTest {
     [SetUp]
     public void Setup() {
         _searchParameters = new SearchParameters() {
-            Filters = new List<Filter>() {
-                new("Name", FilterOperator.Contains, "Franco", false),
-                new("Age", FilterOperator.GreaterThan, 20.ToString(), true)
-            },
+            Filters = [
+                new Filter("Name", FilterOperator.Contains, "Franco", false),
+                new Filter("Age", FilterOperator.GreaterThan, 20.ToString(), true)
+            ],
             Paging = Paging.FromPaging(2, 10),
-            Sortings = new List<Sorting>() {
+            Sortings = [
                 new Sorting("Name", SortOrder.Ascending),
                 new Sorting("Age", SortOrder.Descending)
-            }
+            ]
         };
     }
 

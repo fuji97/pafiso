@@ -3,14 +3,9 @@ using System.Linq.Expressions;
 
 namespace Pafiso.Enumerables; 
 
-public class PagedQueryable<T> : IQueryable<T> {
-    public int TotalEntries { get; }
-    public IQueryable<T> Entries { get; }
-    
-    public PagedQueryable(int totalEntries, IQueryable<T> entries) {
-        TotalEntries = totalEntries;
-        Entries = entries;
-    }
+public class PagedQueryable<T>(int totalEntries, IQueryable<T> entries) : IQueryable<T> {
+    public int TotalEntries { get; } = totalEntries;
+    public IQueryable<T> Entries { get; } = entries;
 
     public IEnumerator<T> GetEnumerator() {
         return Entries.GetEnumerator();

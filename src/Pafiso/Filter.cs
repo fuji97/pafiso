@@ -6,7 +6,7 @@ using Pafiso.Util;
 namespace Pafiso; 
 
 public class Filter {
-    public List<string> Fields { get; } = new();
+    public List<string> Fields { get; } = [];
     public FilterOperator Operator { get; }
     public string? Value { get; } = null!;
     public bool CaseSensitive { get; } = false;
@@ -16,7 +16,7 @@ public class Filter {
 
     [JsonConstructor]
     public Filter(string field, FilterOperator @operator, string? value, bool caseSensitive = false) {
-        Fields = new List<string> { field };
+        Fields = [field];
         Operator = @operator;
         Value = value;
         CaseSensitive = caseSensitive;
@@ -56,33 +56,33 @@ public class Filter {
     }
     
     public static Filter<T> FromExpression<T>(Expression<Func<T,bool>> expression) {
-        if (expression.Body is BinaryExpression binaryExpression) {
-            var field = ExpressionUtilities.ExpressionDecomposer(binaryExpression.Left);
+        switch (expression.Body) {
+            case BinaryExpression binaryExpression: {
+                var field = ExpressionUtilities.ExpressionDecomposer(binaryExpression.Left);
 
-            string? value;
-            try {
-                value = ExpressionUtilities.GetExpressionValue(binaryExpression.Right);
+                string? value;
+                try {
+                    value = ExpressionUtilities.GetExpressionValue(binaryExpression.Right);
+                }
+                catch (InvalidOperationException e) {
+                    throw new InvalidOperationException($"Expression must be a binary expression with a constant value on the right side. {e.Message}");
+                }
+        
+                var operatorName = binaryExpression.NodeType.ToFilterOperator(value);
+        
+                return new Filter<T>(field, operatorName, value);
             }
-            catch (InvalidOperationException e) {
-                throw new InvalidOperationException($"Expression must be a binary expression with a constant value on the right side. {e.Message}");
+            case UnaryExpression unaryExpression: {
+                var (path, op, value) = ExpressionUtilities.DecomposeUnaryWrapperExpression(unaryExpression);
+                return new Filter<T>(path, op, value);
             }
-        
-            var operatorName = binaryExpression.NodeType.ToFilterOperator(value);
-        
-            return new Filter<T>(field, operatorName, value);
-        } 
-        
-        if (expression.Body is UnaryExpression unaryExpression) {
-            var (path, op, value) = ExpressionUtilities.DecomposeUnaryWrapperExpression(unaryExpression);
-            return new Filter<T>(path, op, value);
+            case MethodCallExpression methodCallExpression: {
+                var (path, op, value) = ExpressionUtilities.DecomposeMethodCallExpression(methodCallExpression);
+                return new Filter<T>(path, op, value);
+            }
+            default:
+                throw new InvalidOperationException("Unsupported expression");
         }
-        
-        if (expression.Body is MethodCallExpression methodCallExpression) {
-            var (path, op, value) = ExpressionUtilities.DecomposeMethodCallExpression(methodCallExpression);
-            return new Filter<T>(path, op, value);
-        }
-        
-        throw new InvalidOperationException("Unsupported expression");
     }
 
     public IDictionary<string, string> ToDictionary() {

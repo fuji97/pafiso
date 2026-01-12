@@ -14,23 +14,20 @@ public class SortingTest {
         public Bar Bar { get; set; } = null!;
     }
 
-    public class Bar {
-        public int Id { get; set; }
-        public Bar(int id) {
-            Id = id;
-        }
+    public class Bar(int id) {
+        public int Id { get; set; } = id;
     }
 
-    private List<Foo> _foos = new();
+    private List<Foo> _foos = [];
 
     [SetUp]
     public void Setup() {
-        _foos = new List<Foo> {
-            new() { Id = 2, Name = "B", Bar = new Bar(5) },
-            new() { Id = 1, Name = "A", Bar = new Bar(8) },
-            new() { Id = 4, Name = "D", Bar = new Bar(2) },
-            new() { Id = 3, Name = "C", Bar = new Bar(3) }
-        };
+        _foos = [
+            new Foo { Id = 2, Name = "B", Bar = new Bar(5) },
+            new Foo { Id = 1, Name = "A", Bar = new Bar(8) },
+            new Foo { Id = 4, Name = "D", Bar = new Bar(2) },
+            new Foo { Id = 3, Name = "C", Bar = new Bar(3) }
+        ];
     }
 
     [Test]
