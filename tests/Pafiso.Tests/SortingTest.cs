@@ -1,11 +1,11 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using FluentAssertions;
 using NUnit.Framework;
 using Pafiso.Util;
+using Shouldly;
 
-namespace Pafiso.Tests; 
+namespace Pafiso.Tests;
 
 public class SortingTest {
     public class Foo {
@@ -34,29 +34,26 @@ public class SortingTest {
     public void CreateFromExpression() {
         var sort = Sorting.FromExpression<Foo>(x => x.Name, SortOrder.Ascending);
         var orderedList = _foos.OrderBy(sort).ToList();
-        
-        orderedList.Select(x => x.Name).Should()
-            .BeEquivalentTo(_foos.Select(x => x.Name).OrderBy(x => x));
+
+        orderedList.Select(x => x.Name).ShouldBe(_foos.Select(x => x.Name).OrderBy(x => x));
     }
 
     [Test]
     public void CreateFromTypedExpression() {
         var sort = Sorting.FromExpression<Foo>(x => x.Name, SortOrder.Ascending);
-        
+
         var orderedList = _foos.OrderBy(sort).ToList();
-        
-        orderedList.Select(x => x.Name).Should()
-            .BeEquivalentTo(_foos.Select(x => x.Name).OrderBy(x => x));
+
+        orderedList.Select(x => x.Name).ShouldBe(_foos.Select(x => x.Name).OrderBy(x => x));
     }
 
     [Test]
     public void SortByNestedProperties() {
         var sort = Sorting.FromExpression<Foo>(x => x.Bar.Id, SortOrder.Ascending);
-        
+
         var orderedList = _foos.OrderBy(sort).ToList();
-        
-        orderedList.Should()
-            .BeEquivalentTo(_foos.OrderBy(x => x.Bar.Id));
+
+        orderedList.ShouldBe(_foos.OrderBy(x => x.Bar.Id));
     }
 
     [Test]
@@ -66,10 +63,9 @@ public class SortingTest {
         var serialized = JsonSerializer.Serialize(sort);
         var deserializedSort = JsonSerializer.Deserialize<Sorting>(serialized);
 
-        deserializedSort.Should().NotBeNull();
+        deserializedSort.ShouldNotBeNull();
         var orderedList = _foos.OrderBy(deserializedSort!).ToList();
-        
-        orderedList.Select(x => x.Name).Should()
-            .BeEquivalentTo(_foos.Select(x => x.Name).OrderBy(x => x));
+
+        orderedList.Select(x => x.Name).ShouldBe(_foos.Select(x => x.Name).OrderBy(x => x));
     }
 }

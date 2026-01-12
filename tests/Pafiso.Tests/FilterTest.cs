@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
-using FluentAssertions;
 using NUnit.Framework;
 using Pafiso.Util;
+using Shouldly;
 
-namespace Pafiso.Tests; 
+namespace Pafiso.Tests;
 
 public class FilterTest {
     private class Foo {
@@ -18,7 +18,7 @@ public class FilterTest {
 
     private List<Foo> _foos = null!;
     private Filter _filter = null!;
-    
+
     [SetUp]
     public void Setup() {
         _foos = [
@@ -40,141 +40,140 @@ public class FilterTest {
         var query = _filter.ToDictionary();
         var filter = Filter.FromDictionary(query);
 
-        filter.Fields.Should().BeEquivalentTo(_filter.Fields);
-        filter.Operator.Should().Be(_filter.Operator);
-        filter.Value.Should().Be(_filter.Value);
-        filter.CaseSensitive.Should().Be(_filter.CaseSensitive);
+        filter.Fields.ShouldBe(_filter.Fields);
+        filter.Operator.ShouldBe(_filter.Operator);
+        filter.Value.ShouldBe(_filter.Value);
+        filter.CaseSensitive.ShouldBe(_filter.CaseSensitive);
     }
 
     [Test]
     public void Equals() {
         var filter = Filter.FromExpression<Foo>(x => x.Age == 20);
-        
+
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Age == 20));
+        filtered.ShouldBe(_foos.Where(x => x.Age == 20));
     }
-    
+
     [Test]
     public void EqualsCases() {
         var filterInsensitive = new Filter(nameof(Foo.Name), FilterOperator.Equals, "john");
         var filterSensitive = new Filter(nameof(Foo.Name), FilterOperator.Equals, "john", true);
-        
+
         var sensitiveFiltered = _foos.Where(filterSensitive).ToList();
         var insensitiveFiltered = _foos.Where(filterInsensitive).ToList();
-        
-        insensitiveFiltered.Count.Should().Be(1);
-        insensitiveFiltered[0].Should().Be(_foos[0]);
-        
-        sensitiveFiltered.Count.Should().Be(0);
+
+        insensitiveFiltered.Count.ShouldBe(1);
+        insensitiveFiltered[0].ShouldBe(_foos[0]);
+
+        sensitiveFiltered.Count.ShouldBe(0);
     }
-    
+
     [Test]
     public void NotEquals() {
         var filter = Filter.FromExpression<Foo>(x => x.Age != 20);
-        
+
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Age != 20));
+        filtered.ShouldBe(_foos.Where(x => x.Age != 20));
     }
-    
+
     [Test]
     public void GreaterThan() {
         var filter = Filter.FromExpression<Foo>(x => x.Age > 20);
-        
+
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Age > 20));
+        filtered.ShouldBe(_foos.Where(x => x.Age > 20));
     }
 
     [Test]
     public void LessThan() {
         var filter = Filter.FromExpression<Foo>(x => x.Age < 20);
-        
+
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Age < 20));
+        filtered.ShouldBe(_foos.Where(x => x.Age < 20));
     }
-    
+
     [Test]
     public void GreaterThanOrEquals() {
         var filter = Filter.FromExpression<Foo>(x => x.Age >= 20);
-        
+
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Age >= 20));
+        filtered.ShouldBe(_foos.Where(x => x.Age >= 20));
     }
-    
+
     [Test]
     public void LessThanOrEquals() {
         var filter = Filter.FromExpression<Foo>(x => x.Age <= 20);
-        
+
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Age <= 20));
+        filtered.ShouldBe(_foos.Where(x => x.Age <= 20));
     }
-    
+
     [Test]
     public void Contains() {
         var filter = Filter.FromExpression<Foo>(x => x.Name.Contains('o'));
-        
+
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Name.Contains('o')));
+        filtered.ShouldBe(_foos.Where(x => x.Name.Contains('o')));
     }
-    
+
     [Test]
     public void NotContains() {
         var filter = Filter.FromExpression<Foo>(x => !x.Name.Contains('o'));
-        
+
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => !x.Name.Contains('o')));
+        filtered.ShouldBe(_foos.Where(x => !x.Name.Contains('o')));
     }
 
     [Test]
     public void IsNull() {
         var filter = Filter.FromExpression<Foo>(x => x.Description == null);
-        
+
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Description == null));
+        filtered.ShouldBe(_foos.Where(x => x.Description == null));
     }
-    
+
     [Test]
     public void IsNotNull() {
         var filter = Filter.FromExpression<Foo>(x => x.Description != null);
-        
+
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Description != null));
+        filtered.ShouldBe(_foos.Where(x => x.Description != null));
     }
 
     [Test]
     public void NestedContains() {
         var filter = Filter.FromExpression<Foo>(x => x.SubFoo.SubName.Contains('o'));
-        
+
         var filtered = _foos.Where(filter).ToList();
-        
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.SubFoo.SubName.Contains('o')));
+
+        filtered.ShouldBe(_foos.Where(x => x.SubFoo.SubName.Contains('o')));
     }
 
     [Test]
     public void MultipleFields() {
         var filter = Filter.FromExpression<Foo>(x => x.Name.Contains('o')).AddField(x => x.SubFoo.SubName);
-        
+
         var filtered = _foos.Where(filter).ToList();
 
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Name.Contains('o') || x.SubFoo.SubName.Contains('o')));
+        filtered.ShouldBe(_foos.Where(x => x.Name.Contains('o') || x.SubFoo.SubName.Contains('o')));
     }
 
     [Test]
     public void ContainsCaseInsensitive() {
         var filter = Filter.FromExpression<Foo>(x => x.Name.Contains("JOHN"));
-        
+
         var filtered = _foos.Where(filter).ToList();
-        
-        filtered.Should().BeEquivalentTo(_foos.Where(x => x.Name.ToLower().Contains("john")));
+
+        filtered.ShouldBe(_foos.Where(x => x.Name.ToLower().Contains("john")));
     }
 }
-
