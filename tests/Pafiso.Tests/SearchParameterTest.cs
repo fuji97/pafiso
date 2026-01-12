@@ -27,7 +27,7 @@ public class SearchParameterTest {
         var dictionary = _searchParameters.ToDictionary();
         dictionary.Count.ShouldBe(13);
         dictionary["filters[1][fields]"].ShouldBe("Age");
-        dictionary["sortings[0][ord]"].ShouldBe(nameof(SortOrder.Ascending));
+        dictionary["sortings[0][ord]"].ShouldBe("asc");
         dictionary["take"].ShouldBe("10");
     }
 

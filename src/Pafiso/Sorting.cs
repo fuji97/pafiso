@@ -33,12 +33,12 @@ public class Sorting(string propertyName, SortOrder sortOrder) {
     public IDictionary<string,string> ToDictionary() {
         return new Dictionary<string, string> {
             { "prop", PropertyName },
-            { "ord", SortOrder.ToString() }
+            { "ord", SortOrder.ToEnumMemberValue() }
         };
     }
-    
+
     public static Sorting FromDictionary(IDictionary<string, string> dict) {
-        return new Sorting(dict["prop"], Enum.Parse<SortOrder>(dict["ord"]));
+        return new Sorting(dict["prop"], EnumExtensions.ParseEnumMember<SortOrder>(dict["ord"]));
     }
 
     public override string ToString() {

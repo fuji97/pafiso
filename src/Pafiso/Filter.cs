@@ -88,7 +88,7 @@ public class Filter {
     public IDictionary<string, string> ToDictionary() {
         var dict = new Dictionary<string, string>() {
             ["fields"] = string.Join(',', Fields),
-            ["op"] = Operator.ToString(),
+            ["op"] = Operator.ToEnumMemberValue(),
         };
         if (Value != null) {
             dict["val"] = Value;
@@ -105,7 +105,7 @@ public class Filter {
         var op = dict["op"]!;
         dict.TryGetValue("val", out var val);
         var caseSensitive = dict.ContainsKey("case") && dict["case"] == "true";
-        return new Filter(fields, Enum.Parse<FilterOperator>(op), val, caseSensitive);
+        return new Filter(fields, EnumExtensions.ParseEnumMember<FilterOperator>(op), val, caseSensitive);
     }
     
     public Filter AddField<T>(Expression<Func<T, object>> fieldExpression) {

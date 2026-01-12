@@ -34,7 +34,7 @@ describe('Filter', () => {
 
     expect(dict).toEqual({
       fields: 'Name',
-      op: 'Contains',
+      op: 'contains',
       val: 'Franco',
       case: 'true',
     });
@@ -57,7 +57,7 @@ describe('Filter', () => {
   it('should deserialize from dictionary', () => {
     const dict = {
       fields: 'Name,Description',
-      op: 'Contains',
+      op: 'contains',
       val: 'test',
       case: 'true',
     };
@@ -103,12 +103,12 @@ describe('Sorting', () => {
 
     expect(dict).toEqual({
       prop: 'DateCreated',
-      ord: 'Descending',
+      ord: 'desc',
     });
   });
 
   it('should deserialize from dictionary', () => {
-    const dict = { prop: 'Name', ord: 'Ascending' };
+    const dict = { prop: 'Name', ord: 'asc' };
     const s = Sorting.fromDictionary(dict);
 
     expect(s.property).toBe('Name');
@@ -201,16 +201,16 @@ describe('SearchParameters', () => {
     const dict = sp.toDictionary();
 
     expect(dict['filters[0][fields]']).toBe('Name');
-    expect(dict['filters[0][op]']).toBe('Contains');
+    expect(dict['filters[0][op]']).toBe('contains');
     expect(dict['filters[0][val]']).toBe('Franco');
     expect(dict['filters[1][fields]']).toBe('Age');
-    expect(dict['filters[1][op]']).toBe('GreaterThan');
+    expect(dict['filters[1][op]']).toBe('gt');
     expect(dict['filters[1][val]']).toBe('20');
     expect(dict['filters[1][case]']).toBe('true');
     expect(dict['sortings[0][prop]']).toBe('Name');
-    expect(dict['sortings[0][ord]']).toBe('Ascending');
+    expect(dict['sortings[0][ord]']).toBe('asc');
     expect(dict['sortings[1][prop]']).toBe('Age');
-    expect(dict['sortings[1][ord]']).toBe('Descending');
+    expect(dict['sortings[1][ord]']).toBe('desc');
     expect(dict['skip']).toBe('10');
     expect(dict['take']).toBe('10');
   });
@@ -218,10 +218,10 @@ describe('SearchParameters', () => {
   it('should deserialize from dictionary', () => {
     const dict = {
       'filters[0][fields]': 'Name',
-      'filters[0][op]': 'Contains',
+      'filters[0][op]': 'contains',
       'filters[0][val]': 'Franco',
       'sortings[0][prop]': 'Name',
-      'sortings[0][ord]': 'Ascending',
+      'sortings[0][ord]': 'asc',
       skip: '10',
       take: '10',
     };
@@ -247,7 +247,7 @@ describe('SearchParameters', () => {
     const params = sp.toURLSearchParams();
 
     expect(params.get('filters[0][fields]')).toBe('Name');
-    expect(params.get('filters[0][op]')).toBe('Equals');
+    expect(params.get('filters[0][op]')).toBe('eq');
     expect(params.get('filters[0][val]')).toBe('test');
   });
 
@@ -258,13 +258,13 @@ describe('SearchParameters', () => {
     const decoded = decodeURIComponent(qs);
 
     expect(decoded).toContain('sortings[0][prop]=Name');
-    expect(decoded).toContain('sortings[0][ord]=Ascending');
+    expect(decoded).toContain('sortings[0][ord]=asc');
     expect(decoded).toContain('skip=0');
     expect(decoded).toContain('take=10');
   });
 
   it('should parse from query string', () => {
-    const qs = 'filters[0][fields]=Name&filters[0][op]=Contains&filters[0][val]=test&skip=5&take=10';
+    const qs = 'filters[0][fields]=Name&filters[0][op]=contains&filters[0][val]=test&skip=5&take=10';
 
     const sp = SearchParameters.fromQueryString(qs);
 
@@ -283,7 +283,7 @@ describe('SearchParameters', () => {
     const dict = sp.toDictionary();
 
     expect(Object.keys(dict).filter((k) => k.includes('sortings'))).toHaveLength(2);
-    expect(dict['sortings[0][ord]']).toBe('Ascending');
+    expect(dict['sortings[0][ord]']).toBe('asc');
   });
 });
 
@@ -331,7 +331,7 @@ describe('SearchParametersBuilder', () => {
       .filter((f) => f.field('Name').contains('test'))
       .toURLSearchParams();
 
-    expect(params.get('filters[0][op]')).toBe('Contains');
+    expect(params.get('filters[0][op]')).toBe('contains');
   });
 
   it('should convert directly to query string', () => {
