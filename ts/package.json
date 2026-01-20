@@ -1,6 +1,6 @@
 {
   "name": "pafiso",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha.1",
   "description": "TypeScript library for generating Paging, Filtering, and Sorting parameters for REST requests",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -21,7 +21,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run test:run && npm run build"
   },
   "keywords": [
     "paging",
@@ -29,10 +30,22 @@
     "sorting",
     "query-string",
     "rest-api",
-    "queryable"
+    "queryable",
+    "search-parameters",
+    "typescript",
+    "pagination"
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fuji97/pafiso.git",
+    "directory": "ts"
+  },
+  "homepage": "https://github.com/fuji97/pafiso#readme",
+  "bugs": {
+    "url": "https://github.com/fuji97/pafiso/issues"
+  },
   "devDependencies": {
     "@types/node": "^22.19.6",
     "tsup": "^8.0.0",

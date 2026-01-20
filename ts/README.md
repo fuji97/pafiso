@@ -1,6 +1,10 @@
 # Pafiso (TypeScript)
 
-TypeScript library for generating Paging, Filtering, and Sorting parameters for REST requests. Compatible with the [Pafiso .NET library](../README.md).
+TypeScript library for generating Paging, Filtering, and Sorting parameters for REST requests. Compatible with the Pafiso .NET library.
+
+> **⚠️ WARNING: Proof-of-Concept Library**
+> 
+> This library was generated as a proof-of-concept using AI code generation (vibecoding) and it has NOT been tested. **Use with caution** and thoroughly test in your specific use case. Contributions, bug reports, and improvements are welcome!
 
 ## Installation
 
