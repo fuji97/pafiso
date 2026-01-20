@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.Serialization;
 
-namespace Pafiso.Util;
+namespace Pafiso.Extensions;
 
 public static class EnumExtensions {
     public static string ToEnumMemberValue<T>(this T value) where T : Enum {

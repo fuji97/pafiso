@@ -1,42 +1,40 @@
 ﻿using System.Collections;
+using System.Data.Entity;
 using System.Linq.Expressions;
 
-namespace Pafiso.Enumerables; 
+namespace Pafiso.Enumerables;
 
-public class PagedQueryable<T>(int totalEntries, IQueryable<T> entries) : IQueryable<T> {
-    public int TotalEntries { get; } = totalEntries;
-    public IQueryable<T> Entries { get; } = entries;
+public class PagedQueryable<T>(IQueryable<T> countQuery, IQueryable<T> entriesQuery) : IQueryable<T> {
+    private IQueryable<T> CountQuery { get; init; } = countQuery;
+    private IQueryable<T> EntriesQuery { get; init; } = entriesQuery;
+
+    public async Task<PagedList<T>> ToPagedListAsync() {
+        return new PagedList<T>() {
+            TotalEntries = await CountQuery.CountAsync(),
+            Entries = await EntriesQuery.ToListAsync()
+        };
+    }
 
     public IEnumerator<T> GetEnumerator() {
-        return Entries.GetEnumerator();
+        return EntriesQuery.GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator() {
-        return ((IEnumerable)Entries).GetEnumerator();
+        return ((IEnumerable)EntriesQuery).GetEnumerator();
     }
 
-    public Type ElementType => Entries.ElementType;
+    public Type ElementType => EntriesQuery.ElementType;
 
-    public Expression Expression => Entries.Expression;
+    public Expression Expression => EntriesQuery.Expression;
 
-    public IQueryProvider Provider => Entries.Provider;
-    
-    public static PagedQueryable<T> Empty() {
-        return new PagedQueryable<T>(0, Enumerable.Empty<T>().AsQueryable());
-    }
-    
-    public void Deconstruct(out int totalEntries, out IQueryable<T> entries) {
-        totalEntries = TotalEntries;
-        entries = Entries;
-    }
-    
-    public static implicit operator PagedEnumerable<T>(PagedQueryable<T> pagedQueryable) {
-        return new PagedEnumerable<T>(pagedQueryable.TotalEntries, pagedQueryable.Entries);
-    }
+    public IQueryProvider Provider => EntriesQuery.Provider;
 }
 
-public static class PagedQueryable {
-    public static PagedQueryable<T> Empty<T>() {
-        return new PagedQueryable<T>(0, Enumerable.Empty<T>().AsQueryable());
+public static class PagedExtensions {
+    public static PagedQueryable<T> WithSearchParameters<T>(this IQueryable<T> query, SearchParameters searchParameters,
+        Func<IQueryable<T>, IQueryable<T>> applyQuery) {
+        var entriesQuery = applyQuery(query);
+
+        return new PagedQueryable<T>(query, entriesQuery);
     }
 }

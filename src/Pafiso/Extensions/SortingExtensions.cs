@@ -1,4 +1,4 @@
-namespace Pafiso.Util;
+namespace Pafiso.Extensions;
 
 public static class SortingExtensions {
     public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> query, Sorting sorting) {

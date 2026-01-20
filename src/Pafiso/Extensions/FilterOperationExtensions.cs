@@ -1,4 +1,4 @@
-﻿namespace Pafiso.Util; 
+﻿namespace Pafiso.Extensions; 
 
 public static class FilterOperationExtensions {
     public static string ToOperator(this FilterOperator op) {

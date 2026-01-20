@@ -1,7 +1,4 @@
-﻿using System.Linq.Expressions;
-using LinqKit;
-
-namespace Pafiso.Util;
+﻿namespace Pafiso.Extensions;
 
 public static class FilterExtensions {
     public static IQueryable<T> Where<T>(this IQueryable<T> query, Filter filter) {
