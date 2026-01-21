@@ -1,0 +1,15 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/Pafiso.AspNetCore/Pafiso.AspNetCore.csproj" />
+    <Project Path="src/Pafiso/Pafiso.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Pafiso.AspNetCore.Tests/Pafiso.AspNetCore.Tests.csproj" />
+    <Project Path="tests/Pafiso.Tests/Pafiso.Tests.csproj" />
+  </Folder>
+</Solution>
