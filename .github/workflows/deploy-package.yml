@@ -2,12 +2,17 @@ name: Build, run tests and publish to nuget
 on:
   release:
     types: [published]
+
+permissions:
+  id-token: write   # required for GitHub OIDC
+    
 jobs:
   build-and-test:
     name: Build and test
     runs-on: ubuntu-latest
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
     steps:
       - uses: actions/checkout@v6
       - name: Setup .NET
@@ -27,7 +32,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
-    
+
+    permissions:
+      id-token: write  # enable GitHub OIDC token issuance for this job
+
     steps:
       - uses: actions/checkout@v6
       - name: Setup .NET
@@ -47,5 +55,12 @@ jobs:
         run: dotnet pack src/Pafiso/Pafiso.csproj -c Release -o out /p:Version=${{ env.PACKAGE_VERSION }}
       - name: Pack Pafiso.AspNetCore
         run: dotnet pack src/Pafiso.AspNetCore/Pafiso.AspNetCore.csproj -c Release -o out /p:Version=${{ env.PACKAGE_VERSION }}
+
+      - name: NuGet login (OIDC → temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: fuji97
+      
       - name: Push to NuGet
-        run: dotnet nuget push "out/*.nupkg" --source "https://api.nuget.org/v3/index.json"
+        run: dotnet nuget push "out/*.nupkg" --api-key ${{steps.login.outputs.NUGET_API_KEY}} --source "https://api.nuget.org/v3/index.json"
