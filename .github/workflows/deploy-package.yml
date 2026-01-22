@@ -1,8 +1,7 @@
 name: Build, run tests and publish to nuget
 on:
-  push:
-    tags:
-      - 'v*' # Trigger on tags starting with 'v'
+  release:
+    types: [published]
 jobs:
   build-and-test:
     name: Build and test
@@ -28,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+    
     steps:
       - uses: actions/checkout@v5
       - name: Setup .NET
@@ -36,7 +36,7 @@ jobs:
           dotnet-version: 10.0.x
       - name: Set Package Version
         run: |
-          VERSION_NAME="${{ github.ref_name }}"
+          VERSION_NAME="${{ github.event.release.tag_name }}"
           if [[ "$VERSION_NAME" == v* ]]; then
             # Remove 'v' prefix if it exists
             echo "PACKAGE_VERSION=${VERSION_NAME:1}" >> $GITHUB_ENV
@@ -47,4 +47,3 @@ jobs:
         run: dotnet pack src/Pafiso/Pafiso.csproj -c Release -o out /p:Version=${{ env.PACKAGE_VERSION }}
       - name: Push to NuGet
         run: dotnet nuget push "out/*.nupkg" --api-key ${{secrets.NUGET_API_KEY}} --source "https://api.nuget.org/v3/index.json"
-
