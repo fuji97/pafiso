@@ -1,15 +1,54 @@
 namespace Pafiso.Extensions;
 
 public static class SortingExtensions {
-    public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> query, Sorting sorting) {
-        return sorting.ApplyToIQueryable(query);
+    extension<T>(IQueryable<T> query) {
+        public IOrderedQueryable<T> OrderBy(Sorting sorting) {
+            return sorting.ApplyToIQueryable(query);
+        }
+
+        public IOrderedQueryable<T>? OrderBy(Sorting sorting, Action<FieldRestrictions>? configureRestrictions) {
+            if (configureRestrictions == null) return sorting.ApplyToIQueryable(query);
+            var restrictions = new FieldRestrictions();
+            configureRestrictions(restrictions);
+            return sorting.ApplyToIQueryable(query, restrictions);
+        }
+
+        public IOrderedQueryable<T>? OrderBy(Sorting sorting, FieldRestrictions? restrictions) {
+            return sorting.ApplyToIQueryable(query, restrictions);
+        }
     }
-    
-    public static IEnumerable<T> OrderBy<T>(this IEnumerable<T> query, Sorting sorting) {
-        return sorting.ApplyToIQueryable(query.AsQueryable()).ToList();
+
+    extension<T>(IEnumerable<T> query) {
+        public IEnumerable<T> OrderBy(Sorting sorting) {
+            return sorting.ApplyToIQueryable(query.AsQueryable()).ToList();
+        }
+
+        public IEnumerable<T>? OrderBy(Sorting sorting, Action<FieldRestrictions>? configureRestrictions) {
+            if (configureRestrictions == null) return sorting.ApplyToIQueryable(query.AsQueryable()).ToList();
+            var restrictions = new FieldRestrictions();
+            configureRestrictions(restrictions);
+            return sorting.ApplyToIQueryable(query.AsQueryable(), restrictions)?.ToList();
+        }
+
+        public IEnumerable<T>? OrderBy(Sorting sorting, FieldRestrictions? restrictions) {
+            return sorting.ApplyToIQueryable(query.AsQueryable(), restrictions)?.ToList();
+        }
     }
-    
-    public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> query, Sorting sorting) {
-        return sorting.ThenApplyToIQueryable(query);
+
+    extension<T>(IOrderedQueryable<T> query) {
+        public IOrderedQueryable<T> ThenBy(Sorting sorting) {
+            return sorting.ThenApplyToIQueryable(query);
+        }
+
+        public IOrderedQueryable<T> ThenBy(Sorting sorting, Action<FieldRestrictions>? configureRestrictions) {
+            if (configureRestrictions == null) return sorting.ThenApplyToIQueryable(query);
+            var restrictions = new FieldRestrictions();
+            configureRestrictions(restrictions);
+            return sorting.ThenApplyToIQueryable(query, restrictions);
+        }
+
+        public IOrderedQueryable<T> ThenBy(Sorting sorting, FieldRestrictions? restrictions) {
+            return sorting.ThenApplyToIQueryable(query, restrictions);
+        }
     }
 }

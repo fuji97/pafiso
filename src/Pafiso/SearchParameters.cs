@@ -40,22 +40,41 @@ public class SearchParameters {
         return this;
     }
 
+    /// <summary>
+    /// Applies search parameters to the queryable.
+    /// </summary>
+    /// <param name="query">The source queryable to apply parameters to.</param>
+    /// <returns>A tuple containing the count query (before paging) and the paged query.</returns>
     public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(IQueryable<T> query) {
         return ApplyToIQueryableInternal<T>(query, null);
     }
 
     /// <summary>
-    /// Applies search parameters to the queryable with field-level restrictions.
+    /// Applies search parameters to the queryable with optional field-level restrictions.
     /// Restricted fields are silently ignored.
     /// </summary>
     /// <param name="query">The source queryable to apply parameters to.</param>
-    /// <param name="configureRestrictions">Action to configure field restrictions using a fluent builder.</param>
+    /// <param name="configureRestrictions">Optional action to configure field restrictions using a fluent builder.</param>
     /// <returns>A tuple containing the count query (before paging) and the paged query.</returns>
     public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(
         IQueryable<T> query,
-        Action<FieldRestrictions> configureRestrictions) {
+        Action<FieldRestrictions>? configureRestrictions) {
+        if (configureRestrictions == null) return ApplyToIQueryableInternal<T>(query, null);
         var restrictions = new FieldRestrictions();
         configureRestrictions(restrictions);
+        return ApplyToIQueryableInternal(query, restrictions);
+    }
+
+    /// <summary>
+    /// Applies search parameters to the queryable with optional field-level restrictions.
+    /// Restricted fields are silently ignored.
+    /// </summary>
+    /// <param name="query">The source queryable to apply parameters to.</param>
+    /// <param name="restrictions">Optional pre-configured field restrictions instance.</param>
+    /// <returns>A tuple containing the count query (before paging) and the paged query.</returns>
+    public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(
+        IQueryable<T> query,
+        FieldRestrictions? restrictions) {
         return ApplyToIQueryableInternal(query, restrictions);
     }
 
@@ -64,35 +83,11 @@ public class SearchParameters {
         FieldRestrictions? restrictions) {
 
         if (Filters.Count != 0) {
-            IEnumerable<Filter> filtersToApply;
-            if (restrictions == null) {
-                filtersToApply = Filters;
-            } else {
-                // For each filter, get only the allowed fields
-                // If no fields are allowed, skip the filter entirely
-                filtersToApply = Filters
-                    .Select(f => {
-                        var allowedFields = restrictions.GetAllowedFilterFields(f);
-                        if (allowedFields.Count == 0) return null;
-                        if (allowedFields.Count == f.Fields.Count) return f;
-                        return new Filter(allowedFields, f.Operator, f.Value, f.CaseSensitive);
-                    })
-                    .OfType<Filter>();
-            }
-            query = filtersToApply.Aggregate(query, (current, filter) => current.Where(filter));
+            query = Filters.Aggregate(query, (current, filter) => filter.ApplyFilter(current, restrictions));
         }
 
         if (Sortings.Count != 0) {
-            var distinctSortings = Sortings.DistinctBy(x => x.PropertyName).ToArray();
-            var sortingsToApply = restrictions == null
-                ? distinctSortings
-                : distinctSortings.Where(s => restrictions.IsSortFieldAllowed(s.PropertyName)).ToArray();
-
-            if (sortingsToApply.Length > 0) {
-                var orderedQuery = query.OrderBy(sortingsToApply.First());
-                query = sortingsToApply.Skip(1).Aggregate(orderedQuery,
-                    (current, sorting) => current.ThenBy(sorting));
-            }
+            query = ApplySortings(query, restrictions);
         }
 
         var countQuery = query;
@@ -100,6 +95,31 @@ public class SearchParameters {
         if (Paging != null) query = query.Paging(Paging);
 
         return (countQuery, query);
+    }
+
+    private IQueryable<T> ApplySortings<T>(IQueryable<T> query, FieldRestrictions? restrictions) {
+        var distinctSortings = Sortings.DistinctBy(x => x.PropertyName).ToArray();
+        var (orderedQuery, startIndex) = GetFirstAllowedSorting(query, distinctSortings, restrictions);
+
+        if (orderedQuery == null) return query;
+
+        return distinctSortings.Skip(startIndex)
+            .Aggregate(orderedQuery, (current, sorting) => sorting.ThenApplyToIQueryable(current, restrictions));
+    }
+
+    private static (IOrderedQueryable<T>? query, int nextIndex) GetFirstAllowedSorting<T>(
+        IQueryable<T> query,
+        Sorting[] sortings,
+        FieldRestrictions? restrictions) {
+
+        for (var i = 0; i < sortings.Length; i++) {
+            var orderedQuery = sortings[i].ApplyToIQueryable(query, restrictions);
+            if (orderedQuery != null) {
+                return (orderedQuery, i + 1);
+            }
+        }
+
+        return (null, sortings.Length);
     }
 
     public IDictionary<string, string> ToDictionary() {
@@ -116,11 +136,11 @@ public class SearchParameters {
     }
 
     public static SearchParameters FromDictionary(IDictionary<string, string> dict) {
-        var splitted = QueryStringHelpers.SplitQueryStringInList(dict);
+        var split = QueryStringHelpers.SplitQueryStringInList(dict);
 
         var paging = Paging.FromDictionary(dict);
-        var sorting = splitted.ContainsKey("sortings") ? splitted["sortings"].Select(Sorting.FromDictionary) : null;
-        var filters = splitted.ContainsKey("filters") ? splitted["filters"].Select(Filter.FromDictionary) : null;
+        var sorting = split.TryGetValue("sortings", out var value) ? value.Select(Sorting.FromDictionary) : null;
+        var filters = split.TryGetValue("filters", out var value1) ? value1.Select(Filter.FromDictionary) : null;
         return new SearchParameters {
             Paging = paging,
             Sortings = sorting?.ToList() ?? [],
