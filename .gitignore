@@ -5,3 +5,4 @@ riderModule.iml
 /_ReSharper.Caches/
 /ts/dist
 /ts/node_modules
+/.claude/*.local.json
