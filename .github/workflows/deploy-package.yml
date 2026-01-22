@@ -48,4 +48,4 @@ jobs:
       - name: Pack Pafiso.AspNetCore
         run: dotnet pack src/Pafiso.AspNetCore/Pafiso.AspNetCore.csproj -c Release -o out /p:Version=${{ env.PACKAGE_VERSION }}
       - name: Push to NuGet
-        run: dotnet nuget push "out/*.nupkg" --api-key ${{secrets.NUGET_API_KEY}} --source "https://api.nuget.org/v3/index.json"
+        run: dotnet nuget push "out/*.nupkg" --source "https://api.nuget.org/v3/index.json"
