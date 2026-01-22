@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using Pafiso.Extensions;
 using Shouldly;
 
 namespace Pafiso.Tests;
@@ -440,6 +441,282 @@ public class FieldRestrictionsTest {
         var results = pagedQuery.ToList();
         results.Count.ShouldBe(1);
         results[0].Name.ShouldBe("Beta"); // Second item after Alpha
+    }
+
+    #endregion
+
+    #region Extension Methods with FieldRestrictions Tests
+
+    [Test]
+    public void FilterExtensions_Where_WithBuilder_AppliesRestrictions() {
+        var filter = new Filter(nameof(Product.Secret), FilterOperator.Equals, "X");
+
+        var results = _products.AsQueryable()
+            .Where(filter, r => r.BlockFiltering(nameof(Product.Secret)))
+            .ToList();
+
+        // Filter blocked, all products returned
+        results.Count.ShouldBe(3);
+    }
+
+    [Test]
+    public void FilterExtensions_Where_WithDirectInstance_AppliesRestrictions() {
+        var filter = new Filter(nameof(Product.Secret), FilterOperator.Equals, "X");
+        var restrictions = new FieldRestrictions().BlockFiltering(nameof(Product.Secret));
+
+        var results = _products.AsQueryable()
+            .Where(filter, restrictions)
+            .ToList();
+
+        // Filter blocked, all products returned
+        results.Count.ShouldBe(3);
+    }
+
+    [Test]
+    public void FilterExtensions_Where_MultiField_PartialRestriction() {
+        var filter = new Filter([nameof(Product.Name), nameof(Product.Secret)], FilterOperator.Equals, "Alpha");
+        var restrictions = new FieldRestrictions().AllowFiltering(nameof(Product.Name));
+
+        var results = _products.AsQueryable()
+            .Where(filter, restrictions)
+            .ToList();
+
+        // Only Name field is allowed, finds Alpha
+        results.Count.ShouldBe(1);
+        results[0].Name.ShouldBe("Alpha");
+    }
+
+    [Test]
+    public void FilterExtensions_Where_IEnumerable_WithRestrictions() {
+        var filter = new Filter(nameof(Product.Name), FilterOperator.Equals, "Alpha");
+        var restrictions = new FieldRestrictions().AllowFiltering(nameof(Product.Name));
+
+        var results = _products
+            .Where(filter, restrictions)
+            .ToList();
+
+        results.Count.ShouldBe(1);
+        results[0].Name.ShouldBe("Alpha");
+    }
+
+    [Test]
+    public void SortingExtensions_OrderBy_WithBuilder_AppliesRestrictions() {
+        var sorting = new Sorting(nameof(Product.Secret), SortOrder.Ascending);
+
+        var result = _products.AsQueryable()
+            .OrderBy(sorting, r => r.BlockSorting(nameof(Product.Secret)));
+
+        // Sorting blocked, returns null
+        result.ShouldBeNull();
+    }
+
+    [Test]
+    public void SortingExtensions_OrderBy_WithDirectInstance_AppliesRestrictions() {
+        var sorting = new Sorting(nameof(Product.Price), SortOrder.Ascending);
+        var restrictions = new FieldRestrictions().AllowSorting(nameof(Product.Price));
+
+        var result = _products.AsQueryable()
+            .OrderBy(sorting, restrictions);
+
+        // Sorting allowed
+        result.ShouldNotBeNull();
+        result!.ToList().Select(x => x.Price).ShouldBe([10m, 20m, 30m]);
+    }
+
+    [Test]
+    public void SortingExtensions_OrderBy_Blocked_ReturnsNull() {
+        var sorting = new Sorting(nameof(Product.Price), SortOrder.Ascending);
+        var restrictions = new FieldRestrictions().BlockSorting(nameof(Product.Price));
+
+        var result = _products.AsQueryable()
+            .OrderBy(sorting, restrictions);
+
+        result.ShouldBeNull();
+    }
+
+    [Test]
+    public void SortingExtensions_ThenBy_WithRestrictions() {
+        var primarySorting = new Sorting(nameof(Product.Price), SortOrder.Ascending);
+        var secondarySorting = new Sorting(nameof(Product.Name), SortOrder.Descending);
+        var restrictions = new FieldRestrictions()
+            .AllowSorting(nameof(Product.Price), nameof(Product.Name));
+
+        var result = _products.AsQueryable()
+            .OrderBy(primarySorting, restrictions)!
+            .ThenBy(secondarySorting, restrictions)
+            .ToList();
+
+        result.Select(x => x.Price).ShouldBe([10m, 20m, 30m]);
+    }
+
+    [Test]
+    public void SortingExtensions_ThenBy_Blocked_ReturnsOriginalQuery() {
+        var primarySorting = new Sorting(nameof(Product.Price), SortOrder.Ascending);
+        var secondarySorting = new Sorting(nameof(Product.Secret), SortOrder.Ascending);
+        var restrictions = new FieldRestrictions()
+            .AllowSorting(nameof(Product.Price))
+            .BlockSorting(nameof(Product.Secret));
+
+        var orderedQuery = _products.AsQueryable().OrderBy(primarySorting, restrictions)!;
+        var result = orderedQuery.ThenBy(secondarySorting, restrictions).ToList();
+
+        // Secondary sorting blocked, but primary sorting still applied
+        result.Select(x => x.Price).ShouldBe([10m, 20m, 30m]);
+    }
+
+    [Test]
+    public void SortingExtensions_OrderBy_IEnumerable_WithRestrictions() {
+        var sorting = new Sorting(nameof(Product.Price), SortOrder.Descending);
+        var restrictions = new FieldRestrictions().AllowSorting(nameof(Product.Price));
+
+        var result = _products.OrderBy(sorting, restrictions);
+
+        result.ShouldNotBeNull();
+        result!.Select(x => x.Price).ShouldBe([30m, 20m, 10m]);
+    }
+
+    [Test]
+    public void SortingExtensions_OrderBy_IEnumerable_Blocked_ReturnsNull() {
+        var sorting = new Sorting(nameof(Product.Secret), SortOrder.Ascending);
+        var restrictions = new FieldRestrictions().BlockSorting(nameof(Product.Secret));
+
+        var result = _products.OrderBy(sorting, restrictions);
+
+        result.ShouldBeNull();
+    }
+
+    #endregion
+
+    #region Direct FieldRestrictions Instance Tests
+
+    [Test]
+    public void ApplyToIQueryable_WithDirectInstance_WorksLikeBuilder() {
+        var searchParams = new SearchParameters()
+            .AddFilters(
+                new Filter(nameof(Product.Name), FilterOperator.Equals, "Alpha"),
+                new Filter(nameof(Product.Secret), FilterOperator.Equals, "X")
+            );
+
+        // Using direct instance
+        var restrictions = new FieldRestrictions();
+        restrictions.BlockFiltering(nameof(Product.Secret));
+        var (_, pagedQueryDirect) = searchParams.ApplyToIQueryable(
+            _products.AsQueryable(),
+            restrictions
+        );
+
+        // Using builder
+        var (_, pagedQueryBuilder) = searchParams.ApplyToIQueryable(
+            _products.AsQueryable(),
+            r => r.BlockFiltering(nameof(Product.Secret))
+        );
+
+        pagedQueryDirect.ToList().ShouldBe(pagedQueryBuilder.ToList());
+    }
+
+    [Test]
+    public void ApplyToIQueryable_WithDirectInstance_AppliesFilterRestrictions() {
+        var searchParams = new SearchParameters()
+            .AddFilters(
+                new Filter(nameof(Product.Name), FilterOperator.Equals, "Alpha"),
+                new Filter(nameof(Product.Secret), FilterOperator.Equals, "X")
+            );
+
+        var restrictions = new FieldRestrictions()
+            .AllowFiltering(nameof(Product.Name), nameof(Product.Price));
+
+        var (_, pagedQuery) = searchParams.ApplyToIQueryable(
+            _products.AsQueryable(),
+            restrictions
+        );
+
+        var results = pagedQuery.ToList();
+        results.Count.ShouldBe(1);
+        results[0].Name.ShouldBe("Alpha");
+    }
+
+    [Test]
+    public void ApplyToIQueryable_WithDirectInstance_AppliesSortRestrictions() {
+        var searchParams = new SearchParameters()
+            .AddSorting(
+                new Sorting(nameof(Product.Secret), SortOrder.Ascending),
+                new Sorting(nameof(Product.Price), SortOrder.Descending)
+            );
+
+        var restrictions = new FieldRestrictions()
+            .BlockSorting(nameof(Product.Secret));
+
+        var (_, pagedQuery) = searchParams.ApplyToIQueryable(
+            _products.AsQueryable(),
+            restrictions
+        );
+
+        var results = pagedQuery.ToList();
+        results.Select(x => x.Price).ShouldBe([30m, 20m, 10m]);
+    }
+
+    [Test]
+    public void ApplyToIQueryable_WithDirectInstance_MixedRestrictions() {
+        var searchParams = new SearchParameters()
+            .AddFilters(
+                new Filter(nameof(Product.Name), FilterOperator.Contains, "a"),
+                new Filter(nameof(Product.Secret), FilterOperator.Equals, "X")
+            )
+            .AddSorting(
+                new Sorting(nameof(Product.Secret), SortOrder.Ascending),
+                new Sorting(nameof(Product.Price), SortOrder.Ascending)
+            );
+
+        var restrictions = new FieldRestrictions()
+            .AllowFiltering(nameof(Product.Name), nameof(Product.Price))
+            .BlockSorting(nameof(Product.Secret));
+
+        var (_, pagedQuery) = searchParams.ApplyToIQueryable(
+            _products.AsQueryable(),
+            restrictions
+        );
+
+        var results = pagedQuery.ToList();
+        results.Count.ShouldBe(3);
+        results.Select(x => x.Price).ShouldBe([10m, 20m, 30m]);
+    }
+
+    [Test]
+    public void ApplyToIQueryable_WithDirectInstance_CanBeReused() {
+        var restrictions = new FieldRestrictions()
+            .AllowFiltering(nameof(Product.Name))
+            .AllowSorting(nameof(Product.Price));
+
+        var searchParams1 = new SearchParameters()
+            .AddFilters(new Filter(nameof(Product.Name), FilterOperator.Equals, "Alpha"));
+
+        var searchParams2 = new SearchParameters()
+            .AddFilters(new Filter(nameof(Product.Name), FilterOperator.Equals, "Beta"));
+
+        var (_, query1) = searchParams1.ApplyToIQueryable(_products.AsQueryable(), restrictions);
+        var (_, query2) = searchParams2.ApplyToIQueryable(_products.AsQueryable(), restrictions);
+
+        query1.ToList().Count.ShouldBe(1);
+        query1.ToList()[0].Name.ShouldBe("Alpha");
+        query2.ToList().Count.ShouldBe(1);
+        query2.ToList()[0].Name.ShouldBe("Beta");
+    }
+
+    [Test]
+    public void ApplyToIQueryable_WithDirectInstance_ExpressionBased() {
+        var searchParams = new SearchParameters()
+            .AddFilters(new Filter(nameof(Product.Secret), FilterOperator.Equals, "X"));
+
+        var restrictions = new FieldRestrictions()
+            .AllowFiltering<Product>(x => x.Name, x => x.Price);
+
+        var (_, pagedQuery) = searchParams.ApplyToIQueryable(
+            _products.AsQueryable(),
+            restrictions
+        );
+
+        var results = pagedQuery.ToList();
+        results.Count.ShouldBe(3);
     }
 
     #endregion

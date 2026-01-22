@@ -129,6 +129,21 @@ public class Filter {
         return query.Where(predicatesBuilder);
     }
 
+    /// <summary>
+    /// Applies a filter to the queryable with optional field-level restrictions.
+    /// </summary>
+    /// <param name="query">The source queryable to apply the filter to.</param>
+    /// <param name="restrictions">Optional field restrictions instance.</param>
+    /// <returns>The filtered queryable.</returns>
+    public IQueryable<T> ApplyFilter<T>(IQueryable<T> query, FieldRestrictions? restrictions) {
+        if (restrictions == null) return ApplyFilter(query);
+        var allowedFields = restrictions.GetAllowedFilterFields(this);
+        if (allowedFields.Count == 0) return query;
+        if (allowedFields.Count == Fields.Count) return ApplyFilter(query);
+        var restrictedFilter = new Filter(allowedFields, Operator, Value, CaseSensitive);
+        return restrictedFilter.ApplyFilter(query);
+    }
+
     private Expression<Func<T,bool>> ApplyCorrectOperation<T>(Filter filter, string field) {
         return ExpressionUtilities.BuildFilterExpression<T>(field, "x", filter.Operator, filter.Value, filter.CaseSensitive);
     }
