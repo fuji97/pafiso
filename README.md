@@ -2,7 +2,9 @@
 A library to serialize, deserialize and apply Paging, Filtering and Sorting.
 
 [![NuGet Version](https://img.shields.io/nuget/v/Pafiso.svg)](https://www.nuget.org/packages/Pafiso/)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/fuji97/pafiso/deploy-package.yml)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/Pafiso.svg)](https://www.nuget.org/packages/Pafiso/)
+![Build Status](https://img.shields.io/github/actions/workflow/status/fuji97/pafiso/test.yml)
+![Deploy Status](https://img.shields.io/github/actions/workflow/status/fuji97/pafiso/deploy-package.yml)
 
 ## Installation
 Install Pafiso via NuGet Package Manager:
