@@ -108,24 +108,32 @@ var restored = SearchParameters.FromDictionary(dict);
 
 ### ASP.NET Core Integration
 
+Install the ASP.NET Core integration package:
+```
+PM> Install-Package Pafiso.AspNetCore
+```
+Or via the .NET CLI:
+```
+dotnet add package Pafiso.AspNetCore
+```
+
 Parse query parameters from an HTTP request and apply them to a database query:
 
 ```csharp
+using Pafiso.AspNetCore;
+
 [HttpGet]
 public IActionResult GetProducts()
 {
-    // Convert query string to dictionary
-    var queryDict = Request.Query.ToDictionary(x => x.Key, x => x.Value.ToString());
-
-    // Parse into SearchParameters
-    var searchParams = SearchParameters.FromDictionary(queryDict);
+    // Convert query string directly to SearchParameters
+    var searchParams = Request.Query.ToSearchParameters();
 
     // Apply to your IQueryable (e.g., Entity Framework DbSet)
-    PagedQueryable<Product> result = searchParams.ApplyToIQueryable(_dbContext.Products);
+    var (countQuery, pagedQuery) = searchParams.ApplyToIQueryable(_dbContext.Products);
 
     return Ok(new {
-        TotalCount = result.TotalEntries,
-        Items = result.ToList()
+        TotalCount = countQuery.Count(),
+        Items = pagedQuery.ToList()
     });
 }
 ```
@@ -134,6 +142,38 @@ Example query string:
 ```
 GET /products?skip=0&take=10&filters[0][fields]=Name&filters[0][op]=Contains&filters[0][val]=phone&sortings[0][prop]=Price&sortings[0][ord]=Descending
 ```
+
+### Field Restrictions
+
+Control which fields can be filtered and sorted by clients using `FieldRestrictions`:
+
+```csharp
+[HttpGet]
+public IActionResult GetProducts()
+{
+    var searchParams = Request.Query.ToSearchParameters();
+
+    // Apply with field restrictions
+    var (countQuery, pagedQuery) = searchParams.ApplyToIQueryable(
+        _dbContext.Products,
+        restrictions => restrictions
+            .AllowFiltering<Product>(x => x.Name, x => x.Price, x => x.Category)
+            .AllowSorting<Product>(x => x.Name, x => x.Price)
+            .BlockFiltering<Product>(x => x.InternalCost)
+    );
+
+    return Ok(new {
+        TotalCount = countQuery.Count(),
+        Items = pagedQuery.ToList()
+    });
+}
+```
+
+Restriction methods:
+- `AllowFiltering` / `AllowSorting` - Allowlist specific fields (all others are blocked)
+- `BlockFiltering` / `BlockSorting` - Blocklist specific fields (all others are allowed)
+- Blocklist takes precedence over allowlist
+- Supports both expression-based (`x => x.Name`) and string-based (`"Name"`) field specification
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
