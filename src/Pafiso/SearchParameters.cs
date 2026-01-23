@@ -41,14 +41,58 @@ public class SearchParameters {
     }
 
     public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(IQueryable<T> query) {
-        if (Filters.Count != 0) 
-            query = Filters.Aggregate(query, (current, filter) => current.Where(filter));
+        return ApplyToIQueryableInternal<T>(query, null);
+    }
+
+    /// <summary>
+    /// Applies search parameters to the queryable with field-level restrictions.
+    /// Restricted fields are silently ignored.
+    /// </summary>
+    /// <param name="query">The source queryable to apply parameters to.</param>
+    /// <param name="configureRestrictions">Action to configure field restrictions using a fluent builder.</param>
+    /// <returns>A tuple containing the count query (before paging) and the paged query.</returns>
+    public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(
+        IQueryable<T> query,
+        Action<FieldRestrictions> configureRestrictions) {
+        var restrictions = new FieldRestrictions();
+        configureRestrictions(restrictions);
+        return ApplyToIQueryableInternal(query, restrictions);
+    }
+
+    private (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryableInternal<T>(
+        IQueryable<T> query,
+        FieldRestrictions? restrictions) {
+
+        if (Filters.Count != 0) {
+            IEnumerable<Filter> filtersToApply;
+            if (restrictions == null) {
+                filtersToApply = Filters;
+            } else {
+                // For each filter, get only the allowed fields
+                // If no fields are allowed, skip the filter entirely
+                filtersToApply = Filters
+                    .Select(f => {
+                        var allowedFields = restrictions.GetAllowedFilterFields(f);
+                        if (allowedFields.Count == 0) return null;
+                        if (allowedFields.Count == f.Fields.Count) return f;
+                        return new Filter(allowedFields, f.Operator, f.Value, f.CaseSensitive);
+                    })
+                    .OfType<Filter>();
+            }
+            query = filtersToApply.Aggregate(query, (current, filter) => current.Where(filter));
+        }
 
         if (Sortings.Count != 0) {
             var distinctSortings = Sortings.DistinctBy(x => x.PropertyName).ToArray();
-            var orderedQuery = query.OrderBy(distinctSortings.First());
-            query = distinctSortings.Skip(1).Aggregate(orderedQuery,
-                (current, sorting) => current.ThenBy(sorting));
+            var sortingsToApply = restrictions == null
+                ? distinctSortings
+                : distinctSortings.Where(s => restrictions.IsSortFieldAllowed(s.PropertyName)).ToArray();
+
+            if (sortingsToApply.Length > 0) {
+                var orderedQuery = query.OrderBy(sortingsToApply.First());
+                query = sortingsToApply.Skip(1).Aggregate(orderedQuery,
+                    (current, sorting) => current.ThenBy(sorting));
+            }
         }
 
         var countQuery = query;
