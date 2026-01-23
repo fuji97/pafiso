@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Text.Json;
 using NUnit.Framework;
+using Pafiso.Extensions;
 using Pafiso.Util;
 using Shouldly;
 
