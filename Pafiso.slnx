@@ -6,10 +6,12 @@
   </Configurations>
   <Folder Name="/src/">
     <Project Path="src/Pafiso.AspNetCore/Pafiso.AspNetCore.csproj" />
+    <Project Path="src/Pafiso.EntityFrameworkCore/Pafiso.EntityFrameworkCore.csproj" />
     <Project Path="src/Pafiso/Pafiso.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Pafiso.AspNetCore.Tests/Pafiso.AspNetCore.Tests.csproj" />
+    <Project Path="tests/Pafiso.EntityFrameworkCore.Tests/Pafiso.EntityFrameworkCore.Tests.csproj" />
     <Project Path="tests/Pafiso.Tests/Pafiso.Tests.csproj" />
   </Folder>
 </Solution>

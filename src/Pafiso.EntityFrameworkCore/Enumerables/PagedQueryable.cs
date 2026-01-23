@@ -1,16 +1,18 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore;
+using Pafiso.Enumerables;
 
-namespace Pafiso.Enumerables;
+namespace Pafiso.EntityFrameworkCore.Enumerables;
 
 public class PagedQueryable<T>(IQueryable<T> countQuery, IQueryable<T> entriesQuery) : IQueryable<T> {
     private IQueryable<T> CountQuery { get; init; } = countQuery;
     private IQueryable<T> EntriesQuery { get; init; } = entriesQuery;
 
-    public PagedList<T> ToPagedList() {
+    public async Task<PagedList<T>> ToPagedListAsync() {
         return new PagedList<T>() {
-            TotalEntries = CountQuery.Count(),
-            Entries = EntriesQuery.ToList()
+            TotalEntries = await CountQuery.CountAsync(),
+            Entries = await EntriesQuery.ToListAsync()
         };
     }
 

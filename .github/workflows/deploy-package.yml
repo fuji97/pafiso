@@ -53,6 +53,8 @@ jobs:
           fi
       - name: Pack Pafiso
         run: dotnet pack src/Pafiso/Pafiso.csproj -c Release -o out /p:Version=${{ env.PACKAGE_VERSION }}
+      - name: Pack Pafiso.EntityFrameworkCore
+        run: dotnet pack src/Pafiso.EntityFrameworkCore/Pafiso.EntityFrameworkCore.csproj -c Release -o out /p:Version=${{ env.PACKAGE_VERSION }}
       - name: Pack Pafiso.AspNetCore
         run: dotnet pack src/Pafiso.AspNetCore/Pafiso.AspNetCore.csproj -c Release -o out /p:Version=${{ env.PACKAGE_VERSION }}
 
