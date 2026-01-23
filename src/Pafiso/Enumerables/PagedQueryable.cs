@@ -32,8 +32,8 @@ public class PagedQueryable<T>(IQueryable<T> countQuery, IQueryable<T> entriesQu
 
 public static class PagedExtensions {
     public static PagedQueryable<T> WithSearchParameters<T>(this IQueryable<T> query, SearchParameters searchParameters,
-        Func<IQueryable<T>, IQueryable<T>> applyQuery) {
-        var entriesQuery = applyQuery(query);
+        Func<IQueryable<T>, IQueryable<T>>? applyQuery = null) {
+        var entriesQuery = applyQuery?.Invoke(query) ?? query;
 
         return new PagedQueryable<T>(query, entriesQuery);
     }
