@@ -1,4 +1,4 @@
-namespace Pafiso.Util;
+namespace Pafiso.Extensions;
 
 public static class PagingExtensions {
     public static IQueryable<T> Paging<T>(this IQueryable<T> query, Paging paging) {

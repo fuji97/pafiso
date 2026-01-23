@@ -1,14 +1,14 @@
 ﻿using Pafiso.Enumerables;
+using Pafiso.Extensions;
 using Pafiso.Util;
 
 namespace Pafiso;
 
 [Serializable]
 public class SearchParameters {
-    protected Paging? _paging = null;
-    protected List<Sorting> _sortings = [];
-    protected List<Filter> _filters = [];
-
+    private Paging? _paging = null;
+    private List<Sorting> _sortings = [];
+    private List<Filter> _filters = [];
 
     public Paging? Paging {
         get => _paging;
@@ -40,23 +40,22 @@ public class SearchParameters {
         return this;
     }
 
-    public PagedQueryable<T> ApplyToIQueryable<T>(IQueryable<T> query) {
-        if (Filters.Any())
-            foreach (var filter in Filters)
-                query = query.Where(filter);
+    public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(IQueryable<T> query) {
+        if (Filters.Count != 0) 
+            query = Filters.Aggregate(query, (current, filter) => current.Where(filter));
 
-        if (Sortings.Any()) {
+        if (Sortings.Count != 0) {
             var distinctSortings = Sortings.DistinctBy(x => x.PropertyName).ToArray();
             var orderedQuery = query.OrderBy(distinctSortings.First());
             query = distinctSortings.Skip(1).Aggregate(orderedQuery,
                 (current, sorting) => current.ThenBy(sorting));
         }
 
-        var count = query.Count();
+        var countQuery = query;
 
         if (Paging != null) query = query.Paging(Paging);
 
-        return new PagedQueryable<T>(count, query);
+        return (countQuery, query);
     }
 
     public IDictionary<string, string> ToDictionary() {
