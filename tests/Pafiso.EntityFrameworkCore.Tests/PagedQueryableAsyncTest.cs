@@ -40,8 +40,7 @@ public class PagedQueryableAsyncTest {
         var queryable = _context.TestEntities.AsQueryable();
         var paging = Paging.FromPaging(0, 10);
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
         var result = await pagedQueryable.ToPagedListAsync();
 
         result.TotalEntries.ShouldBe(100);
@@ -55,8 +54,7 @@ public class PagedQueryableAsyncTest {
         var queryable = _context.TestEntities.AsQueryable();
         var paging = Paging.FromPaging(5, 8);
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
         var result = await pagedQueryable.ToPagedListAsync();
 
         result.TotalEntries.ShouldBe(100);
@@ -73,8 +71,7 @@ public class PagedQueryableAsyncTest {
 
         var pagedQueryable = queryable
             .Where(filter)
-            .WithSearchParameters(new SearchParameters(),
-                query => query.Paging(paging));
+            .WithSearchParameters(new SearchParameters(paging));
         var result = await pagedQueryable.ToPagedListAsync();
 
         result.TotalEntries.ShouldBe(30); // Entities 71-100 have Value > 700
@@ -90,8 +87,7 @@ public class PagedQueryableAsyncTest {
 
         var pagedQueryable = queryable
             .OrderBy(sorting)
-            .WithSearchParameters(new SearchParameters(),
-                query => query.Paging(paging));
+            .WithSearchParameters(new SearchParameters(paging));
         var result = await pagedQueryable.ToPagedListAsync();
 
         result.TotalEntries.ShouldBe(100);
@@ -115,8 +111,7 @@ public class PagedQueryableAsyncTest {
         var pagedQueryable = queryable
             .Where(filter)
             .OrderBy(sorting)
-            .WithSearchParameters(new SearchParameters(),
-                query => query.Paging(paging));
+            .WithSearchParameters(new SearchParameters(paging));
         var result = await pagedQueryable.ToPagedListAsync();
 
         result.TotalEntries.ShouldBe(49); // Entities 1-49 have Value < 500
@@ -152,8 +147,7 @@ public class PagedQueryableAsyncTest {
         var queryable = _context.TestEntities.AsQueryable();
         var paging = Paging.FromPaging(25, 10); // Page 25 is beyond 100 items
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
         var result = await pagedQueryable.ToPagedListAsync();
 
         result.TotalEntries.ShouldBe(100);
@@ -170,8 +164,7 @@ public class PagedQueryableAsyncTest {
         var pagedQueryable = queryable
             .Where(filter1)
             .Where(filter2)
-            .WithSearchParameters(new SearchParameters(),
-                query => query.Paging(paging));
+            .WithSearchParameters(new SearchParameters(paging));
         var result = await pagedQueryable.ToPagedListAsync();
 
         result.TotalEntries.ShouldBe(31); // Entities 30-60 have 300 <= Value <= 600
@@ -191,8 +184,7 @@ public class PagedQueryableAsyncTest {
         var queryable = _context.ParentEntities.Include(p => p.Children).AsQueryable();
         var paging = Paging.FromPaging(0, 10);
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
         var result = await pagedQueryable.ToPagedListAsync();
 
         result.TotalEntries.ShouldBe(1);
@@ -207,8 +199,7 @@ public class PagedQueryableAsyncTest {
             .AsQueryable();
         var paging = Paging.FromPaging(0, 5);
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
         var result = await pagedQueryable.ToPagedListAsync();
 
         result.TotalEntries.ShouldBe(100);
@@ -222,8 +213,7 @@ public class PagedQueryableAsyncTest {
         var queryable = _context.TestEntities.AsQueryable();
         var paging = Paging.FromPaging(0, 10);
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
 
         pagedQueryable.ShouldBeAssignableTo<IQueryable<TestEntity>>();
         pagedQueryable.ElementType.ShouldBe(typeof(TestEntity));
@@ -236,8 +226,7 @@ public class PagedQueryableAsyncTest {
         var queryable = _context.TestEntities.AsQueryable();
         var paging = Paging.FromPaging(9, 10); // Last page with 10 items per page
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
         var result = await pagedQueryable.ToPagedListAsync();
 
         result.TotalEntries.ShouldBe(100);
@@ -251,8 +240,7 @@ public class PagedQueryableAsyncTest {
         var queryable = _context.TestEntities.AsQueryable();
         var paging = Paging.FromPaging(1, 10);
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
 
         var result1 = await pagedQueryable.ToPagedListAsync();
         var result2 = await pagedQueryable.ToPagedListAsync();
