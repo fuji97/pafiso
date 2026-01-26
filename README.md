@@ -119,6 +119,34 @@ Or via the .NET CLI:
 dotnet add package Pafiso.AspNetCore
 ```
 
+#### Dependency Injection Setup
+
+Register Pafiso with the DI container to automatically use your MVC JSON serialization settings:
+
+```csharp
+using Pafiso.AspNetCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Configure MVC with JSON options
+builder.Services.AddControllers()
+    .AddJsonOptions(options => {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    });
+
+// Register Pafiso - automatically picks up JSON naming policy from MVC
+builder.Services.AddPafiso();
+
+// Or configure explicitly
+builder.Services.AddPafiso(settings => {
+    settings.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    settings.UseJsonPropertyNameAttributes = true;
+    settings.UseEfCoreLikeForCaseInsensitive = true;
+});
+```
+
+#### Using with Controllers
+
 Parse query parameters from an HTTP request and apply them to a database query:
 
 ```csharp
@@ -127,7 +155,10 @@ using Pafiso.AspNetCore;
 [HttpGet]
 public IActionResult GetProducts()
 {
-    // Convert query string directly to SearchParameters
+    // Uses settings from DI (via IServiceProvider)
+    var searchParams = Request.Query.ToSearchParameters(HttpContext.RequestServices);
+
+    // Or without DI - uses PafisoSettings.Default
     var searchParams = Request.Query.ToSearchParameters();
 
     // Apply to your IQueryable (e.g., Entity Framework DbSet)
@@ -144,6 +175,70 @@ Example query string:
 ```
 GET /products?skip=0&take=10&filters[0][fields]=Name&filters[0][op]=Contains&filters[0][val]=phone&sortings[0][prop]=Price&sortings[0][ord]=Descending
 ```
+
+### Custom Settings
+
+Configure field name mapping, case sensitivity, and EF Core integration using `PafisoSettings`:
+
+```csharp
+var settings = new PafisoSettings {
+    // Use camelCase field names (e.g., "firstName" maps to "FirstName" property)
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    
+    // Respect [JsonPropertyName] attributes on properties
+    UseJsonPropertyNameAttributes = true,
+    
+    // String comparison for case-insensitive operations (default: OrdinalIgnoreCase)
+    StringComparison = StringComparison.OrdinalIgnoreCase,
+    
+    // Use EF.Functions.Like for case-insensitive matching in EF Core
+    UseEfCoreLikeForCaseInsensitive = true
+};
+
+// Apply settings when parsing or applying filters
+var searchParams = SearchParameters.FromDictionary(dict, settings);
+var result = searchParams.ApplyToIQueryable(products, settings);
+```
+
+Set global defaults:
+
+```csharp
+PafisoSettings.Default = new PafisoSettings {
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    UseJsonPropertyNameAttributes = true
+};
+```
+
+### EF Core Integration
+
+Install the Entity Framework Core integration package for optimized case-insensitive filtering:
+
+```
+PM> Install-Package Pafiso.EntityFrameworkCore
+```
+Or via the .NET CLI:
+```
+dotnet add package Pafiso.EntityFrameworkCore
+```
+
+Register EF Core support at application startup:
+
+```csharp
+using Pafiso.EntityFrameworkCore;
+
+// In Program.cs or Startup.cs
+EfCoreExpressionBuilder.Register();
+```
+
+Then enable EF Core LIKE expressions in your settings:
+
+```csharp
+var settings = new PafisoSettings {
+    UseEfCoreLikeForCaseInsensitive = true
+};
+```
+
+This translates case-insensitive `Contains`, `StartsWith`, and `EndsWith` operations into `EF.Functions.Like()` calls, which are properly translated to SQL `LIKE` clauses.
 
 ### Field Restrictions
 
