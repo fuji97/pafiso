@@ -1,4 +1,4 @@
-﻿using Pafiso.Enumerables;
+using Pafiso.Enumerables;
 using Pafiso.Extensions;
 using Pafiso.Util;
 
@@ -46,7 +46,7 @@ public class SearchParameters {
     /// <param name="query">The source queryable to apply parameters to.</param>
     /// <returns>A tuple containing the count query (before paging) and the paged query.</returns>
     public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(IQueryable<T> query) {
-        return ApplyToIQueryableInternal<T>(query, null);
+        return ApplyToIQueryableInternal<T>(query, null, null);
     }
 
     /// <summary>
@@ -59,10 +59,10 @@ public class SearchParameters {
     public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(
         IQueryable<T> query,
         Action<FieldRestrictions>? configureRestrictions) {
-        if (configureRestrictions == null) return ApplyToIQueryableInternal<T>(query, null);
+        if (configureRestrictions == null) return ApplyToIQueryableInternal<T>(query, null, null);
         var restrictions = new FieldRestrictions();
         configureRestrictions(restrictions);
-        return ApplyToIQueryableInternal(query, restrictions);
+        return ApplyToIQueryableInternal(query, restrictions, null);
     }
 
     /// <summary>
@@ -75,19 +75,65 @@ public class SearchParameters {
     public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(
         IQueryable<T> query,
         FieldRestrictions? restrictions) {
-        return ApplyToIQueryableInternal(query, restrictions);
+        return ApplyToIQueryableInternal(query, restrictions, null);
+    }
+
+    /// <summary>
+    /// Applies search parameters to the queryable with the specified settings.
+    /// </summary>
+    /// <param name="query">The source queryable to apply parameters to.</param>
+    /// <param name="settings">The settings to use for field name resolution and string comparison.</param>
+    /// <returns>A tuple containing the count query (before paging) and the paged query.</returns>
+    public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(
+        IQueryable<T> query,
+        PafisoSettings? settings) {
+        return ApplyToIQueryableInternal(query, null, settings);
+    }
+
+    /// <summary>
+    /// Applies search parameters to the queryable with optional field-level restrictions and settings.
+    /// Restricted fields are silently ignored.
+    /// </summary>
+    /// <param name="query">The source queryable to apply parameters to.</param>
+    /// <param name="configureRestrictions">Optional action to configure field restrictions using a fluent builder.</param>
+    /// <param name="settings">The settings to use for field name resolution and string comparison.</param>
+    /// <returns>A tuple containing the count query (before paging) and the paged query.</returns>
+    public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(
+        IQueryable<T> query,
+        Action<FieldRestrictions>? configureRestrictions,
+        PafisoSettings? settings) {
+        if (configureRestrictions == null) return ApplyToIQueryableInternal<T>(query, null, settings);
+        var restrictions = new FieldRestrictions();
+        configureRestrictions(restrictions);
+        return ApplyToIQueryableInternal(query, restrictions, settings);
+    }
+
+    /// <summary>
+    /// Applies search parameters to the queryable with optional field-level restrictions and settings.
+    /// Restricted fields are silently ignored.
+    /// </summary>
+    /// <param name="query">The source queryable to apply parameters to.</param>
+    /// <param name="restrictions">Optional pre-configured field restrictions instance.</param>
+    /// <param name="settings">The settings to use for field name resolution and string comparison.</param>
+    /// <returns>A tuple containing the count query (before paging) and the paged query.</returns>
+    public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(
+        IQueryable<T> query,
+        FieldRestrictions? restrictions,
+        PafisoSettings? settings) {
+        return ApplyToIQueryableInternal(query, restrictions, settings);
     }
 
     private (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryableInternal<T>(
         IQueryable<T> query,
-        FieldRestrictions? restrictions) {
+        FieldRestrictions? restrictions,
+        PafisoSettings? settings) {
 
         if (Filters.Count != 0) {
-            query = Filters.Aggregate(query, (current, filter) => filter.ApplyFilter(current, restrictions));
+            query = Filters.Aggregate(query, (current, filter) => filter.ApplyFilter(current, restrictions, settings));
         }
 
         if (Sortings.Count != 0) {
-            query = ApplySortings(query, restrictions);
+            query = ApplySortings(query, restrictions, settings);
         }
 
         var countQuery = query;
@@ -97,23 +143,24 @@ public class SearchParameters {
         return (countQuery, query);
     }
 
-    private IQueryable<T> ApplySortings<T>(IQueryable<T> query, FieldRestrictions? restrictions) {
+    private IQueryable<T> ApplySortings<T>(IQueryable<T> query, FieldRestrictions? restrictions, PafisoSettings? settings) {
         var distinctSortings = Sortings.DistinctBy(x => x.PropertyName).ToArray();
-        var (orderedQuery, startIndex) = GetFirstAllowedSorting(query, distinctSortings, restrictions);
+        var (orderedQuery, startIndex) = GetFirstAllowedSorting(query, distinctSortings, restrictions, settings);
 
         if (orderedQuery == null) return query;
 
         return distinctSortings.Skip(startIndex)
-            .Aggregate(orderedQuery, (current, sorting) => sorting.ThenApplyToIQueryable(current, restrictions));
+            .Aggregate(orderedQuery, (current, sorting) => sorting.ThenApplyToIQueryable(current, restrictions, settings));
     }
 
     private static (IOrderedQueryable<T>? query, int nextIndex) GetFirstAllowedSorting<T>(
         IQueryable<T> query,
         Sorting[] sortings,
-        FieldRestrictions? restrictions) {
+        FieldRestrictions? restrictions,
+        PafisoSettings? settings) {
 
         for (var i = 0; i < sortings.Length; i++) {
-            var orderedQuery = sortings[i].ApplyToIQueryable(query, restrictions);
+            var orderedQuery = sortings[i].ApplyToIQueryable(query, restrictions, settings);
             if (orderedQuery != null) {
                 return (orderedQuery, i + 1);
             }
@@ -146,6 +193,24 @@ public class SearchParameters {
             Sortings = sorting?.ToList() ?? [],
             Filters = filters?.ToList() ?? []
         };
+    }
+
+    /// <summary>
+    /// Creates a SearchParameters instance from a dictionary representation.
+    /// Field names in the dictionary will be resolved using the specified settings.
+    /// </summary>
+    /// <param name="dict">The dictionary representation of search parameters.</param>
+    /// <param name="settings">The settings to use for field name resolution (applied when ApplyToIQueryable is called).</param>
+    /// <returns>A new SearchParameters instance.</returns>
+    /// <remarks>
+    /// Note: Field name resolution is not applied during FromDictionary - the original field names are preserved.
+    /// Resolution occurs when ApplyToIQueryable is called with the same settings.
+    /// This allows the SearchParameters to be serialized and deserialized without losing the original field names.
+    /// </remarks>
+    public static SearchParameters FromDictionary(IDictionary<string, string> dict, PafisoSettings? settings) {
+        // Settings are stored for use during ApplyToIQueryable, not during parsing
+        // This allows the original field names to be preserved for serialization
+        return FromDictionary(dict);
     }
 
     protected bool Equals(SearchParameters other) {

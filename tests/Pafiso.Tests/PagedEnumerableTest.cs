@@ -23,8 +23,7 @@ public class PagedEnumerableTest {
         var enumerable = _testData.AsEnumerable();
         var paging = Paging.FromPaging(0, 10);
 
-        var pagedEnumerable = enumerable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedEnumerable = enumerable.WithSearchParameters(new SearchParameters(paging));
         var result = pagedEnumerable.ToPagedList();
 
         result.TotalEntries.ShouldBe(100);
@@ -38,8 +37,7 @@ public class PagedEnumerableTest {
         var enumerable = _testData.AsEnumerable();
         var paging = Paging.FromPaging(2, 10);
 
-        var pagedEnumerable = enumerable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedEnumerable = enumerable.WithSearchParameters(new SearchParameters(paging));
         var result = pagedEnumerable.ToPagedList();
 
         result.TotalEntries.ShouldBe(100);
@@ -56,8 +54,7 @@ public class PagedEnumerableTest {
 
         var pagedEnumerable = enumerable
             .Where(filter)
-            .WithSearchParameters(new SearchParameters(),
-                query => query.Paging(paging));
+            .WithSearchParameters(new SearchParameters(paging));
         var result = pagedEnumerable.ToPagedList();
 
         result.TotalEntries.ShouldBe(50); // Entities 51-100 have Value > 500
@@ -73,8 +70,7 @@ public class PagedEnumerableTest {
 
         var pagedEnumerable = enumerable
             .OrderBy(sorting)
-            .WithSearchParameters(new SearchParameters(),
-                query => query.Paging(paging));
+            .WithSearchParameters(new SearchParameters(paging));
         var result = pagedEnumerable.ToPagedList();
 
         result.TotalEntries.ShouldBe(100);
@@ -99,8 +95,7 @@ public class PagedEnumerableTest {
         var enumerable = _testData.AsEnumerable();
         var paging = Paging.FromPaging(0, 10);
 
-        var pagedEnumerable = enumerable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedEnumerable = enumerable.WithSearchParameters(new SearchParameters(paging));
 
         var count = 0;
         foreach (var item in pagedEnumerable) {
@@ -116,8 +111,7 @@ public class PagedEnumerableTest {
         var enumerable = _testData.AsEnumerable();
         var paging = Paging.FromPaging(0, 5);
 
-        var pagedEnumerable = enumerable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedEnumerable = enumerable.WithSearchParameters(new SearchParameters(paging));
 
         IEnumerable nonGeneric = pagedEnumerable;
         var count = 0;
@@ -145,8 +139,7 @@ public class PagedEnumerableTest {
         var enumerable = _testData.AsEnumerable();
         var paging = Paging.FromPaging(20, 10); // Page 20 is beyond 100 items
 
-        var pagedEnumerable = enumerable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedEnumerable = enumerable.WithSearchParameters(new SearchParameters(paging));
         var result = pagedEnumerable.ToPagedList();
 
         result.TotalEntries.ShouldBe(100);

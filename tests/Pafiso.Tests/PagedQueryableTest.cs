@@ -24,8 +24,7 @@ public class PagedQueryableTest {
         var queryable = _testData.AsQueryable();
         var paging = Paging.FromPaging(0, 10);
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
         var result = pagedQueryable.ToPagedList();
 
         result.TotalEntries.ShouldBe(100);
@@ -39,8 +38,7 @@ public class PagedQueryableTest {
         var queryable = _testData.AsQueryable();
         var paging = Paging.FromPaging(3, 15);
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
         var result = pagedQueryable.ToPagedList();
 
         result.TotalEntries.ShouldBe(100);
@@ -57,8 +55,7 @@ public class PagedQueryableTest {
 
         var pagedQueryable = queryable
             .Where(filter)
-            .WithSearchParameters(new SearchParameters(),
-                query => query.Paging(paging));
+            .WithSearchParameters(new SearchParameters(paging));
         var result = pagedQueryable.ToPagedList();
 
         result.TotalEntries.ShouldBe(30); // Entities 1-30 have Value <= 300
@@ -74,8 +71,7 @@ public class PagedQueryableTest {
 
         var pagedQueryable = queryable
             .OrderBy(sorting)
-            .WithSearchParameters(new SearchParameters(),
-                query => query.Paging(paging));
+            .WithSearchParameters(new SearchParameters(paging));
         var result = pagedQueryable.ToPagedList();
 
         result.TotalEntries.ShouldBe(100);
@@ -95,8 +91,7 @@ public class PagedQueryableTest {
         var pagedQueryable = queryable
             .Where(filter)
             .OrderBy(sorting)
-            .WithSearchParameters(new SearchParameters(),
-                query => query.Paging(paging));
+            .WithSearchParameters(new SearchParameters(paging));
         var result = pagedQueryable.ToPagedList();
 
         result.TotalEntries.ShouldBe(81); // Entities 20-100 have Value >= 200
@@ -121,8 +116,7 @@ public class PagedQueryableTest {
         var queryable = _testData.AsQueryable();
         var paging = Paging.FromPaging(0, 10);
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
 
         pagedQueryable.ShouldBeAssignableTo<IQueryable<TestEntity>>();
         pagedQueryable.ElementType.ShouldBe(typeof(TestEntity));
@@ -135,8 +129,7 @@ public class PagedQueryableTest {
         var queryable = _testData.AsQueryable();
         var paging = Paging.FromPaging(0, 10);
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
 
         var count = 0;
         foreach (var item in pagedQueryable) {
@@ -152,8 +145,7 @@ public class PagedQueryableTest {
         var queryable = _testData.AsQueryable();
         var paging = Paging.FromPaging(0, 5);
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
 
         IEnumerable nonGeneric = pagedQueryable;
         var count = 0;
@@ -181,8 +173,7 @@ public class PagedQueryableTest {
         var queryable = _testData.AsQueryable();
         var paging = Paging.FromPaging(15, 10); // Page 15 is beyond 100 items
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
         var result = pagedQueryable.ToPagedList();
 
         result.TotalEntries.ShouldBe(100);
@@ -194,8 +185,7 @@ public class PagedQueryableTest {
         var queryable = _testData.AsQueryable();
         var paging = Paging.FromPaging(0, 20);
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Paging(paging));
+        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(paging));
 
         // Should be able to apply additional LINQ operations
         var count = pagedQueryable.Count();
@@ -212,8 +202,9 @@ public class PagedQueryableTest {
         var queryable = _testData.AsQueryable();
         var paging = Paging.FromPaging(0, 10);
 
-        var pagedQueryable = queryable.WithSearchParameters(new SearchParameters(),
-            query => query.Where(e => e.Value > 100).Paging(paging));
+        var pagedQueryable = queryable
+            .Where(e => e.Value > 100)
+            .WithSearchParameters(new SearchParameters(paging));
 
         pagedQueryable.ElementType.ShouldBe(typeof(TestEntity));
         pagedQueryable.Expression.ShouldNotBeNull();
