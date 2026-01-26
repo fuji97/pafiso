@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Linq.Expressions;
 using System.Text.Json.Serialization;
 using Pafiso.Extensions;
@@ -37,6 +37,43 @@ public class Sorting(string propertyName, SortOrder sortOrder) {
         return ApplyToIQueryable(query);
     }
 
+    /// <summary>
+    /// Applies sorting to the queryable with the specified settings.
+    /// </summary>
+    /// <param name="query">The source queryable to apply sorting to.</param>
+    /// <param name="settings">The settings to use for field name resolution.</param>
+    /// <returns>The sorted queryable.</returns>
+    public IOrderedQueryable<T> ApplyToIQueryable<T>(IQueryable<T> query, PafisoSettings? settings) {
+        settings ??= PafisoSettings.Default;
+        var resolver = new DefaultFieldNameResolver(settings);
+        var resolvedPropertyName = resolver.ResolvePropertyName<T>(PropertyName);
+        var expr = ExpressionUtilities.BuildLambdaExpression<T, object>(resolvedPropertyName);
+
+        return Ascending ? query.OrderBy(expr) : query.OrderByDescending(expr);
+    }
+
+    /// <summary>
+    /// Applies sorting to the queryable with optional field-level restrictions and settings.
+    /// </summary>
+    /// <param name="query">The source queryable to apply sorting to.</param>
+    /// <param name="restrictions">Optional field restrictions instance.</param>
+    /// <param name="settings">The settings to use for field name resolution.</param>
+    /// <returns>The sorted queryable, or null if the sort field is not allowed.</returns>
+    public IOrderedQueryable<T>? ApplyToIQueryable<T>(IQueryable<T> query, FieldRestrictions? restrictions, PafisoSettings? settings) {
+        if (settings == null && restrictions == null) return ApplyToIQueryable(query);
+        if (settings == null) return ApplyToIQueryable(query, restrictions);
+        if (restrictions == null) return ApplyToIQueryable(query, settings);
+
+        settings ??= PafisoSettings.Default;
+        var resolver = new DefaultFieldNameResolver(settings);
+        var resolvedPropertyName = resolver.ResolvePropertyName<T>(PropertyName);
+
+        if (!restrictions.IsSortFieldAllowed(resolvedPropertyName)) return null;
+
+        var expr = ExpressionUtilities.BuildLambdaExpression<T, object>(resolvedPropertyName);
+        return Ascending ? query.OrderBy(expr) : query.OrderByDescending(expr);
+    }
+
     public IOrderedQueryable<T> ThenApplyToIQueryable<T>(IOrderedQueryable<T> query) {
         var expr = ExpressionUtilities.BuildLambdaExpression<T,object>(PropertyName);
 
@@ -53,6 +90,43 @@ public class Sorting(string propertyName, SortOrder sortOrder) {
         if (restrictions == null) return ThenApplyToIQueryable(query);
         if (!restrictions.IsSortFieldAllowed(PropertyName)) return query;
         return ThenApplyToIQueryable(query);
+    }
+
+    /// <summary>
+    /// Applies secondary sorting to the queryable with the specified settings.
+    /// </summary>
+    /// <param name="query">The source ordered queryable to apply sorting to.</param>
+    /// <param name="settings">The settings to use for field name resolution.</param>
+    /// <returns>The sorted queryable.</returns>
+    public IOrderedQueryable<T> ThenApplyToIQueryable<T>(IOrderedQueryable<T> query, PafisoSettings? settings) {
+        settings ??= PafisoSettings.Default;
+        var resolver = new DefaultFieldNameResolver(settings);
+        var resolvedPropertyName = resolver.ResolvePropertyName<T>(PropertyName);
+        var expr = ExpressionUtilities.BuildLambdaExpression<T, object>(resolvedPropertyName);
+
+        return Ascending ? query.ThenBy(expr) : query.ThenByDescending(expr);
+    }
+
+    /// <summary>
+    /// Applies secondary sorting to the queryable with optional field-level restrictions and settings.
+    /// </summary>
+    /// <param name="query">The source ordered queryable to apply sorting to.</param>
+    /// <param name="restrictions">Optional field restrictions instance.</param>
+    /// <param name="settings">The settings to use for field name resolution.</param>
+    /// <returns>The sorted queryable. If the sort field is not allowed, returns the original query unchanged.</returns>
+    public IOrderedQueryable<T> ThenApplyToIQueryable<T>(IOrderedQueryable<T> query, FieldRestrictions? restrictions, PafisoSettings? settings) {
+        if (settings == null && restrictions == null) return ThenApplyToIQueryable(query);
+        if (settings == null) return ThenApplyToIQueryable(query, restrictions);
+        if (restrictions == null) return ThenApplyToIQueryable(query, settings);
+
+        settings ??= PafisoSettings.Default;
+        var resolver = new DefaultFieldNameResolver(settings);
+        var resolvedPropertyName = resolver.ResolvePropertyName<T>(PropertyName);
+
+        if (!restrictions.IsSortFieldAllowed(resolvedPropertyName)) return query;
+
+        var expr = ExpressionUtilities.BuildLambdaExpression<T, object>(resolvedPropertyName);
+        return Ascending ? query.ThenBy(expr) : query.ThenByDescending(expr);
     }
     
     public IDictionary<string,string> ToDictionary() {

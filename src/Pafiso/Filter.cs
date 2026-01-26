@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using System.Text.Json.Serialization;
 using LinqKit;
 using Pafiso.Extensions;
@@ -144,8 +144,62 @@ public class Filter {
         return restrictedFilter.ApplyFilter(query);
     }
 
+    /// <summary>
+    /// Applies a filter to the queryable with the specified settings.
+    /// </summary>
+    /// <param name="query">The source queryable to apply the filter to.</param>
+    /// <param name="settings">The settings to use for field name resolution and string comparison.</param>
+    /// <returns>The filtered queryable.</returns>
+    public IQueryable<T> ApplyFilter<T>(IQueryable<T> query, PafisoSettings? settings) {
+        settings ??= PafisoSettings.Default;
+        var resolver = new DefaultFieldNameResolver(settings);
+        var predicatesBuilder = PredicateBuilder.New<T>();
+
+        foreach (var field in Fields) {
+            var resolvedField = resolver.ResolvePropertyName<T>(field);
+            predicatesBuilder.Or(ApplyCorrectOperationWithSettings<T>(this, resolvedField, settings));
+        }
+
+        return query.Where(predicatesBuilder);
+    }
+
+    /// <summary>
+    /// Applies a filter to the queryable with optional field-level restrictions and settings.
+    /// </summary>
+    /// <param name="query">The source queryable to apply the filter to.</param>
+    /// <param name="restrictions">Optional field restrictions instance.</param>
+    /// <param name="settings">The settings to use for field name resolution and string comparison.</param>
+    /// <returns>The filtered queryable.</returns>
+    public IQueryable<T> ApplyFilter<T>(IQueryable<T> query, FieldRestrictions? restrictions, PafisoSettings? settings) {
+        if (settings == null && restrictions == null) return ApplyFilter(query);
+        if (settings == null) return ApplyFilter(query, restrictions);
+        if (restrictions == null) return ApplyFilter(query, settings);
+
+        settings ??= PafisoSettings.Default;
+        var resolver = new DefaultFieldNameResolver(settings);
+
+        // Resolve all field names first
+        var resolvedFields = Fields.Select(f => resolver.ResolvePropertyName<T>(f)).ToList();
+
+        // Create a temporary filter with resolved field names for restriction checking
+        var tempFilter = new Filter(resolvedFields, Operator, Value, CaseSensitive);
+        var allowedFields = restrictions.GetAllowedFilterFields(tempFilter);
+        if (allowedFields.Count == 0) return query;
+
+        var predicatesBuilder = PredicateBuilder.New<T>();
+        foreach (var field in allowedFields) {
+            predicatesBuilder.Or(ApplyCorrectOperationWithSettings<T>(this, field, settings));
+        }
+
+        return query.Where(predicatesBuilder);
+    }
+
     private Expression<Func<T,bool>> ApplyCorrectOperation<T>(Filter filter, string field) {
         return ExpressionUtilities.BuildFilterExpression<T>(field, "x", filter.Operator, filter.Value, filter.CaseSensitive);
+    }
+
+    private Expression<Func<T, bool>> ApplyCorrectOperationWithSettings<T>(Filter filter, string field, PafisoSettings settings) {
+        return ExpressionUtilities.BuildFilterExpression<T>(field, "x", filter.Operator, filter.Value, filter.CaseSensitive, settings);
     }
 
     public override string ToString() {
