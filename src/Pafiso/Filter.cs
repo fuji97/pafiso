@@ -2,9 +2,10 @@ using System.Linq.Expressions;
 using System.Text.Json.Serialization;
 using LinqKit;
 using Pafiso.Extensions;
+using Pafiso.Mapping;
 using Pafiso.Util;
 
-namespace Pafiso; 
+namespace Pafiso;
 
 public class Filter {
     public List<string> Fields { get; } = [];
@@ -12,28 +13,75 @@ public class Filter {
     public string? Value { get; } = null!;
     public bool CaseSensitive { get; } = false;
 
-    public Filter() {
-    }
+    // Mapper is required for all filter operations
+    internal readonly object _mapper;
 
+    /// <summary>
+    /// Internal constructor for deserialization only.
+    /// </summary>
     [JsonConstructor]
-    public Filter(string field, FilterOperator @operator, string? value, bool caseSensitive = false) {
+    internal Filter(string field, FilterOperator @operator, string? value, bool caseSensitive = false) {
         Fields = [field];
         Operator = @operator;
         Value = value;
         CaseSensitive = caseSensitive;
+        _mapper = null!; // Will be set by SearchParameters.FromJson
     }
 
-    public Filter(IEnumerable<string> fields, FilterOperator @operator, string? value, bool caseSensitive = false) {
+    /// <summary>
+    /// Creates a filter with mapper support for mapping models.
+    /// </summary>
+    /// <typeparam name="TMapping">The mapping model type (DTO).</typeparam>
+    /// <typeparam name="TEntity">The entity type (database model).</typeparam>
+    /// <param name="field">The field name from the mapping model.</param>
+    /// <param name="operator">The filter operator.</param>
+    /// <param name="value">The filter value.</param>
+    /// <param name="mapper">The field mapper instance.</param>
+    /// <param name="caseSensitive">Whether string comparisons are case-sensitive.</param>
+    /// <returns>A new filter with the mapper embedded.</returns>
+    public static Filter WithMapper<TMapping, TEntity>(
+        string field,
+        FilterOperator @operator,
+        string? value,
+        IFieldMapper<TMapping, TEntity> mapper,
+        bool caseSensitive = false)
+        where TMapping : MappingModel {
+        return new Filter(field, @operator, value, mapper, caseSensitive);
+    }
+
+    /// <summary>
+    /// Creates a filter with mapper support for multiple fields.
+    /// </summary>
+    public static Filter WithMapper<TMapping, TEntity>(
+        IEnumerable<string> fields,
+        FilterOperator @operator,
+        string? value,
+        IFieldMapper<TMapping, TEntity> mapper,
+        bool caseSensitive = false)
+        where TMapping : MappingModel {
+        return new Filter(fields, @operator, value, mapper, caseSensitive);
+    }
+
+    /// <summary>
+    /// Internal constructor for mapper support.
+    /// </summary>
+    internal Filter(string field, FilterOperator @operator, string? value, object mapper, bool caseSensitive = false) {
+        Fields = [field];
+        Operator = @operator;
+        Value = value;
+        CaseSensitive = caseSensitive;
+        _mapper = mapper;
+    }
+
+    /// <summary>
+    /// Internal constructor for mapper support with multiple fields.
+    /// </summary>
+    internal Filter(IEnumerable<string> fields, FilterOperator @operator, string? value, object mapper, bool caseSensitive = false) {
         Fields = fields.ToList();
         Operator = @operator;
         Value = value;
         CaseSensitive = caseSensitive;
-    }
-
-    public Filter(FilterOperator @operator, string? value, bool caseSensitive = false) {
-        Operator = @operator;
-        Value = value;
-        CaseSensitive = caseSensitive;
+        _mapper = mapper;
     }
 
     public bool Equals(Filter other) {
@@ -55,36 +103,6 @@ public class Filter {
     public static bool operator !=(Filter left, Filter right) {
         return !left.Equals(right);
     }
-    
-    public static Filter<T> FromExpression<T>(Expression<Func<T,bool>> expression) {
-        switch (expression.Body) {
-            case BinaryExpression binaryExpression: {
-                var field = ExpressionUtilities.ExpressionDecomposer(binaryExpression.Left);
-
-                string? value;
-                try {
-                    value = ExpressionUtilities.GetExpressionValue(binaryExpression.Right);
-                }
-                catch (InvalidOperationException e) {
-                    throw new InvalidOperationException($"Expression must be a binary expression with a constant value on the right side. {e.Message}");
-                }
-        
-                var operatorName = binaryExpression.NodeType.ToFilterOperator(value);
-        
-                return new Filter<T>(field, operatorName, value);
-            }
-            case UnaryExpression unaryExpression: {
-                var (path, op, value) = ExpressionUtilities.DecomposeUnaryWrapperExpression(unaryExpression);
-                return new Filter<T>(path, op, value);
-            }
-            case MethodCallExpression methodCallExpression: {
-                var (path, op, value) = ExpressionUtilities.DecomposeMethodCallExpression(methodCallExpression);
-                return new Filter<T>(path, op, value);
-            }
-            default:
-                throw new InvalidOperationException("Unsupported expression");
-        }
-    }
 
     public IDictionary<string, string> ToDictionary() {
         var dict = new Dictionary<string, string>() {
@@ -101,48 +119,15 @@ public class Filter {
         return dict;
     }
 
-    public static Filter FromDictionary(IDictionary<string, string> dict) {
-        var fields = dict["fields"]!.Split(",");
-        var op = dict["op"]!;
-        dict.TryGetValue("val", out var val);
-        var caseSensitive = dict.ContainsKey("case") && dict["case"] == "true";
-        return new Filter(fields, EnumExtensions.ParseEnumMember<FilterOperator>(op), val, caseSensitive);
-    }
-    
-    public Filter AddField<T>(Expression<Func<T, object>> fieldExpression) {
-        var member = fieldExpression.Body as MemberExpression;
-        if (member == null) {
-            throw new InvalidOperationException("Expression must be a member expression");
-        }
-        var field = ExpressionUtilities.ExpressionDecomposer(member);
-        Fields.Add(field);
-        return this;
-    }
-    
+
     public IQueryable<T> ApplyFilter<T>(IQueryable<T> query) {
-        var predicatesBuilder = PredicateBuilder.New<T>();
-
-        foreach (var field in Fields) {
-            predicatesBuilder.Or(ApplyCorrectOperation<T>(this, field));
+        if (_mapper == null) {
+            throw new InvalidOperationException(
+                "Filter requires a mapper. Use Filter.WithMapper<TMapping, TEntity>() to create filters with mapping models.");
         }
-
-        return query.Where(predicatesBuilder);
+        return ApplyFilterWithMapper<T>(query, null);
     }
 
-    /// <summary>
-    /// Applies a filter to the queryable with optional field-level restrictions.
-    /// </summary>
-    /// <param name="query">The source queryable to apply the filter to.</param>
-    /// <param name="restrictions">Optional field restrictions instance.</param>
-    /// <returns>The filtered queryable.</returns>
-    public IQueryable<T> ApplyFilter<T>(IQueryable<T> query, FieldRestrictions? restrictions) {
-        if (restrictions == null) return ApplyFilter(query);
-        var allowedFields = restrictions.GetAllowedFilterFields(this);
-        if (allowedFields.Count == 0) return query;
-        if (allowedFields.Count == Fields.Count) return ApplyFilter(query);
-        var restrictedFilter = new Filter(allowedFields, Operator, Value, CaseSensitive);
-        return restrictedFilter.ApplyFilter(query);
-    }
 
     /// <summary>
     /// Applies a filter to the queryable with the specified settings.
@@ -151,55 +136,57 @@ public class Filter {
     /// <param name="settings">The settings to use for field name resolution and string comparison.</param>
     /// <returns>The filtered queryable.</returns>
     public IQueryable<T> ApplyFilter<T>(IQueryable<T> query, PafisoSettings? settings) {
-        settings ??= PafisoSettings.Default;
-        var resolver = new DefaultFieldNameResolver(settings);
-        var predicatesBuilder = PredicateBuilder.New<T>();
+        if (_mapper == null) {
+            throw new InvalidOperationException(
+                "Filter requires a mapper. Use Filter.WithMapper<TMapping, TEntity>() to create filters with mapping models.");
+        }
+        return ApplyFilterWithMapper<T>(query, settings);
+    }
 
+
+    private Expression<Func<T, bool>> ApplyCorrectOperationWithSettings<T>(Filter filter, string field, PafisoSettings settings) {
+        return ExpressionUtilities.BuildFilterExpression<T>(field, "x", filter.Operator, filter.Value, filter.CaseSensitive, settings);
+    }
+
+    /// <summary>
+    /// Applies filter using the configured mapper for field resolution.
+    /// </summary>
+    private IQueryable<T> ApplyFilterWithMapper<T>(IQueryable<T> query, PafisoSettings? settings) {
+        if (_mapper == null) {
+            throw new InvalidOperationException("Mapper is not configured.");
+        }
+
+        settings ??= PafisoSettings.Default;
+
+        // Use reflection to call ResolveToEntityField on the mapper
+        var mapperType = _mapper.GetType();
+        var resolveMethod = mapperType.GetMethod("ResolveToEntityField");
+        if (resolveMethod == null) {
+            throw new InvalidOperationException("Mapper does not have ResolveToEntityField method.");
+        }
+
+        var predicatesBuilder = PredicateBuilder.New<T>();
+        var resolvedFields = new List<string>();
+
+        // Resolve each field using the mapper
+        // The mapper returns null for invalid/restricted fields, which are silently ignored
         foreach (var field in Fields) {
-            var resolvedField = resolver.ResolvePropertyName<T>(field);
+            var resolvedField = resolveMethod.Invoke(_mapper, new object[] { field }) as string;
+            if (resolvedField != null) {
+                resolvedFields.Add(resolvedField);
+            }
+        }
+
+        if (resolvedFields.Count == 0) {
+            return query;
+        }
+
+        // Build filter expressions for each resolved field
+        foreach (var resolvedField in resolvedFields) {
             predicatesBuilder.Or(ApplyCorrectOperationWithSettings<T>(this, resolvedField, settings));
         }
 
         return query.Where(predicatesBuilder);
-    }
-
-    /// <summary>
-    /// Applies a filter to the queryable with optional field-level restrictions and settings.
-    /// </summary>
-    /// <param name="query">The source queryable to apply the filter to.</param>
-    /// <param name="restrictions">Optional field restrictions instance.</param>
-    /// <param name="settings">The settings to use for field name resolution and string comparison.</param>
-    /// <returns>The filtered queryable.</returns>
-    public IQueryable<T> ApplyFilter<T>(IQueryable<T> query, FieldRestrictions? restrictions, PafisoSettings? settings) {
-        if (settings == null && restrictions == null) return ApplyFilter(query);
-        if (settings == null) return ApplyFilter(query, restrictions);
-        if (restrictions == null) return ApplyFilter(query, settings);
-
-        settings ??= PafisoSettings.Default;
-        var resolver = new DefaultFieldNameResolver(settings);
-
-        // Resolve all field names first
-        var resolvedFields = Fields.Select(f => resolver.ResolvePropertyName<T>(f)).ToList();
-
-        // Create a temporary filter with resolved field names for restriction checking
-        var tempFilter = new Filter(resolvedFields, Operator, Value, CaseSensitive);
-        var allowedFields = restrictions.GetAllowedFilterFields(tempFilter);
-        if (allowedFields.Count == 0) return query;
-
-        var predicatesBuilder = PredicateBuilder.New<T>();
-        foreach (var field in allowedFields) {
-            predicatesBuilder.Or(ApplyCorrectOperationWithSettings<T>(this, field, settings));
-        }
-
-        return query.Where(predicatesBuilder);
-    }
-
-    private Expression<Func<T,bool>> ApplyCorrectOperation<T>(Filter filter, string field) {
-        return ExpressionUtilities.BuildFilterExpression<T>(field, "x", filter.Operator, filter.Value, filter.CaseSensitive);
-    }
-
-    private Expression<Func<T, bool>> ApplyCorrectOperationWithSettings<T>(Filter filter, string field, PafisoSettings settings) {
-        return ExpressionUtilities.BuildFilterExpression<T>(field, "x", filter.Operator, filter.Value, filter.CaseSensitive, settings);
     }
 
     public override string ToString() {
@@ -207,21 +194,3 @@ public class Filter {
     }
 }
 
-public class Filter<T> : Filter {
-    public Filter() {
-    }
-
-    public Filter(string field, FilterOperator @operator, string? value, bool caseSensitive = false) : base(field, @operator, value, caseSensitive) {
-    }
-
-    public Filter(IEnumerable<string> fields, FilterOperator @operator, string? value, bool caseSensitive = false) : base(fields, @operator, value, caseSensitive) {
-    }
-
-    public Filter(FilterOperator @operator, string? value, bool caseSensitive = false) : base(@operator, value, caseSensitive) {
-    }
-
-    public Filter<T> AddField(Expression<Func<T,object>> fieldExpression) {
-        AddField<T>(fieldExpression);
-        return this;
-    }
-}

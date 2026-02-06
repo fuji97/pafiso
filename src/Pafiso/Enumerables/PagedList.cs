@@ -5,6 +5,18 @@ namespace Pafiso.Enumerables;
 public class PagedList<T> : IList<T> {
     public int TotalEntries { get; init; } = 0;
     public IList<T> Entries { get; init; } = [];
+    public int PageNumber { get; init; } = 1;
+    public int PageSize { get; init; } = 0;
+
+    public PagedList() { }
+
+    public PagedList(IList<T> entries, int totalEntries, int pageNumber, int pageSize) {
+        Entries = entries;
+        TotalEntries = totalEntries;
+        PageNumber = pageNumber;
+        PageSize = pageSize;
+    }
+
     public IEnumerator<T> GetEnumerator() {
         return Entries.GetEnumerator();
     }

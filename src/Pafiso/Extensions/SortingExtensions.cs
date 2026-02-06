@@ -6,30 +6,8 @@ public static class SortingExtensions {
             return sorting.ApplyToIQueryable(query);
         }
 
-        public IOrderedQueryable<T>? OrderBy(Sorting sorting, Action<FieldRestrictions>? configureRestrictions) {
-            if (configureRestrictions == null) return sorting.ApplyToIQueryable(query);
-            var restrictions = new FieldRestrictions();
-            configureRestrictions(restrictions);
-            return sorting.ApplyToIQueryable(query, restrictions);
-        }
-
-        public IOrderedQueryable<T>? OrderBy(Sorting sorting, FieldRestrictions? restrictions) {
-            return sorting.ApplyToIQueryable(query, restrictions);
-        }
-
         public IOrderedQueryable<T> OrderBy(Sorting sorting, PafisoSettings? settings) {
             return sorting.ApplyToIQueryable(query, settings);
-        }
-
-        public IOrderedQueryable<T>? OrderBy(Sorting sorting, FieldRestrictions? restrictions, PafisoSettings? settings) {
-            return sorting.ApplyToIQueryable(query, restrictions, settings);
-        }
-
-        public IOrderedQueryable<T>? OrderBy(Sorting sorting, Action<FieldRestrictions>? configureRestrictions, PafisoSettings? settings) {
-            if (configureRestrictions == null) return sorting.ApplyToIQueryable(query, settings);
-            var restrictions = new FieldRestrictions();
-            configureRestrictions(restrictions);
-            return sorting.ApplyToIQueryable(query, restrictions, settings);
         }
     }
 
@@ -38,30 +16,8 @@ public static class SortingExtensions {
             return sorting.ApplyToIQueryable(query.AsQueryable()).ToList();
         }
 
-        public IEnumerable<T>? OrderBy(Sorting sorting, Action<FieldRestrictions>? configureRestrictions) {
-            if (configureRestrictions == null) return sorting.ApplyToIQueryable(query.AsQueryable()).ToList();
-            var restrictions = new FieldRestrictions();
-            configureRestrictions(restrictions);
-            return sorting.ApplyToIQueryable(query.AsQueryable(), restrictions)?.ToList();
-        }
-
-        public IEnumerable<T>? OrderBy(Sorting sorting, FieldRestrictions? restrictions) {
-            return sorting.ApplyToIQueryable(query.AsQueryable(), restrictions)?.ToList();
-        }
-
         public IEnumerable<T> OrderBy(Sorting sorting, PafisoSettings? settings) {
             return sorting.ApplyToIQueryable(query.AsQueryable(), settings).ToList();
-        }
-
-        public IEnumerable<T>? OrderBy(Sorting sorting, FieldRestrictions? restrictions, PafisoSettings? settings) {
-            return sorting.ApplyToIQueryable(query.AsQueryable(), restrictions, settings)?.ToList();
-        }
-
-        public IEnumerable<T>? OrderBy(Sorting sorting, Action<FieldRestrictions>? configureRestrictions, PafisoSettings? settings) {
-            if (configureRestrictions == null) return sorting.ApplyToIQueryable(query.AsQueryable(), settings).ToList();
-            var restrictions = new FieldRestrictions();
-            configureRestrictions(restrictions);
-            return sorting.ApplyToIQueryable(query.AsQueryable(), restrictions, settings)?.ToList();
         }
     }
 
@@ -70,30 +26,8 @@ public static class SortingExtensions {
             return sorting.ThenApplyToIQueryable(query);
         }
 
-        public IOrderedQueryable<T> ThenBy(Sorting sorting, Action<FieldRestrictions>? configureRestrictions) {
-            if (configureRestrictions == null) return sorting.ThenApplyToIQueryable(query);
-            var restrictions = new FieldRestrictions();
-            configureRestrictions(restrictions);
-            return sorting.ThenApplyToIQueryable(query, restrictions);
-        }
-
-        public IOrderedQueryable<T> ThenBy(Sorting sorting, FieldRestrictions? restrictions) {
-            return sorting.ThenApplyToIQueryable(query, restrictions);
-        }
-
         public IOrderedQueryable<T> ThenBy(Sorting sorting, PafisoSettings? settings) {
             return sorting.ThenApplyToIQueryable(query, settings);
-        }
-
-        public IOrderedQueryable<T> ThenBy(Sorting sorting, FieldRestrictions? restrictions, PafisoSettings? settings) {
-            return sorting.ThenApplyToIQueryable(query, restrictions, settings);
-        }
-
-        public IOrderedQueryable<T> ThenBy(Sorting sorting, Action<FieldRestrictions>? configureRestrictions, PafisoSettings? settings) {
-            if (configureRestrictions == null) return sorting.ThenApplyToIQueryable(query, settings);
-            var restrictions = new FieldRestrictions();
-            configureRestrictions(restrictions);
-            return sorting.ThenApplyToIQueryable(query, restrictions, settings);
         }
     }
 }

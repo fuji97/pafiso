@@ -2,11 +2,36 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using NUnit.Framework;
 using Pafiso.AspNetCore;
+using Pafiso.Mapping;
 using Shouldly;
 
 namespace Pafiso.AspNetCore.Tests;
 
 public class QueryCollectionExtensionsTest {
+    // Test mapping models
+    public class TestSearchDto : MappingModel {
+        public string? Name { get; set; }
+        public string? Description { get; set; }
+        public decimal? Price { get; set; }
+        public DateTime? CreatedAt { get; set; }
+    }
+
+    // Test entities
+    public class TestEntity {
+        public int Id { get; set; }
+        public string Name { get; set; } = null!;
+        public string Description { get; set; } = null!;
+        public decimal Price { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    private FieldMapper<TestSearchDto, TestEntity> CreateMapper() {
+        return new FieldMapper<TestSearchDto, TestEntity>()
+            .Map(dto => dto.Name, entity => entity.Name)
+            .Map(dto => dto.Description, entity => entity.Description)
+            .Map(dto => dto.Price, entity => entity.Price)
+            .Map(dto => dto.CreatedAt, entity => entity.CreatedAt);
+    }
     [Test]
     public void ToSearchParameters_WithFilters() {
         var query = new QueryCollection(new Dictionary<string, StringValues> {
@@ -16,7 +41,7 @@ public class QueryCollectionExtensionsTest {
             { "filters[0][case]", "true" }
         });
 
-        var searchParameters = query.ToSearchParameters();
+        var searchParameters = query.ToSearchParameters(CreateMapper());
 
         searchParameters.Filters.Count.ShouldBe(1);
         searchParameters.Filters[0].Fields.ShouldBe(["Name"]);
@@ -34,7 +59,7 @@ public class QueryCollectionExtensionsTest {
             { "sortings[1][ord]", "asc" }
         });
 
-        var searchParameters = query.ToSearchParameters();
+        var searchParameters = query.ToSearchParameters(CreateMapper());
 
         searchParameters.Sortings.Count.ShouldBe(2);
         searchParameters.Sortings[0].PropertyName.ShouldBe("Price");
@@ -50,7 +75,7 @@ public class QueryCollectionExtensionsTest {
             { "take", "20" }
         });
 
-        var searchParameters = query.ToSearchParameters();
+        var searchParameters = query.ToSearchParameters(CreateMapper());
 
         searchParameters.Paging.ShouldNotBeNull();
         searchParameters.Paging!.Skip.ShouldBe(10);
@@ -70,7 +95,7 @@ public class QueryCollectionExtensionsTest {
             { "take", "10" }
         });
 
-        var searchParameters = query.ToSearchParameters();
+        var searchParameters = query.ToSearchParameters(CreateMapper());
 
         searchParameters.Filters.Count.ShouldBe(1);
         searchParameters.Sortings.Count.ShouldBe(1);
@@ -81,7 +106,7 @@ public class QueryCollectionExtensionsTest {
     public void ToSearchParameters_EmptyQuery() {
         var query = new QueryCollection(new Dictionary<string, StringValues>());
 
-        var searchParameters = query.ToSearchParameters();
+        var searchParameters = query.ToSearchParameters(CreateMapper());
 
         searchParameters.Filters.ShouldBeEmpty();
         searchParameters.Sortings.ShouldBeEmpty();
@@ -97,7 +122,7 @@ public class QueryCollectionExtensionsTest {
             { "filters[0][case]", "false" }
         });
 
-        var searchParameters = query.ToSearchParameters();
+        var searchParameters = query.ToSearchParameters(CreateMapper());
 
         searchParameters.Filters.Count.ShouldBe(1);
         searchParameters.Filters[0].Fields.ShouldBe(["Name", "Description"]);

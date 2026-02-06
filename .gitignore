@@ -6,3 +6,5 @@ riderModule.iml
 /ts/dist
 /ts/node_modules
 /.claude/*.local.json
+/local-packages/
+/test-local-packages/

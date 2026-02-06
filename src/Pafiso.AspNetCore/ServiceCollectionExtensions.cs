@@ -1,6 +1,8 @@
+using System;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Pafiso.Mapping;
 
 namespace Pafiso.AspNetCore;
 
@@ -52,6 +54,62 @@ public static class ServiceCollectionExtensions {
             PafisoSettings.Default = settings;
 
             services.AddSingleton(settings);
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers a field mapper as a singleton service.
+        /// </summary>
+        /// <typeparam name="TMapping">The mapping model type (DTO) that must inherit from <see cref="MappingModel"/>.</typeparam>
+        /// <typeparam name="TEntity">The entity type (database model) to map to.</typeparam>
+        /// <param name="configure">An optional action to configure the field mapper with custom mappings.</param>
+        /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+        public IServiceCollection AddFieldMapper<TMapping, TEntity>(
+            Action<FieldMapper<TMapping, TEntity>>? configure = null)
+            where TMapping : MappingModel {
+
+            services.AddSingleton<IFieldMapper<TMapping, TEntity>>(sp => {
+                // Get PafisoSettings from DI if available
+                var settings = sp.GetService<PafisoSettings>();
+                var mapper = new FieldMapper<TMapping, TEntity>(settings);
+
+                // Apply custom configuration
+                configure?.Invoke(mapper);
+
+                return mapper;
+            });
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers a field mapper as a singleton service with automatic JSON options integration.
+        /// The mapper will use the same JSON naming policy as configured in MVC's JsonOptions.
+        /// </summary>
+        /// <typeparam name="TMapping">The mapping model type (DTO) that must inherit from <see cref="MappingModel"/>.</typeparam>
+        /// <typeparam name="TEntity">The entity type (database model) to map to.</typeparam>
+        /// <param name="configure">An optional action to configure the field mapper with custom mappings.</param>
+        /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+        public IServiceCollection AddFieldMapperWithJsonOptions<TMapping, TEntity>(
+            Action<FieldMapper<TMapping, TEntity>>? configure = null)
+            where TMapping : MappingModel {
+
+            services.AddSingleton<IFieldMapper<TMapping, TEntity>>(sp => {
+                // Create settings with JSON naming policy from MVC
+                var settings = new PafisoSettings();
+                var jsonOptions = sp.GetService<IOptions<JsonOptions>>();
+                if (jsonOptions?.Value?.JsonSerializerOptions?.PropertyNamingPolicy != null) {
+                    settings.PropertyNamingPolicy = jsonOptions.Value.JsonSerializerOptions.PropertyNamingPolicy;
+                }
+
+                var mapper = new FieldMapper<TMapping, TEntity>(settings);
+
+                // Apply custom configuration
+                configure?.Invoke(mapper);
+
+                return mapper;
+            });
 
             return services;
         }

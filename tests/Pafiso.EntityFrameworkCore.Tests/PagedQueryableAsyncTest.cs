@@ -6,11 +6,23 @@ using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
 using Pafiso.EntityFrameworkCore.Enumerables;
 using Pafiso.Extensions;
+using Pafiso.Mapping;
 using Shouldly;
 
 namespace Pafiso.EntityFrameworkCore.Tests;
 
 public class PagedQueryableAsyncTest {
+    public class TestSearchDto : MappingModel {
+        public string? Name { get; set; }
+        public int? Value { get; set; }
+    }
+
+    private FieldMapper<TestSearchDto, TestEntity> CreateMapper() {
+        return new FieldMapper<TestSearchDto, TestEntity>()
+            .Map(dto => dto.Name, entity => entity.Name)
+            .Map(dto => dto.Value, entity => entity.Value);
+    }
+
     private TestDbContext _context = null!;
 
     [SetUp]
@@ -67,7 +79,7 @@ public class PagedQueryableAsyncTest {
     public async Task ToPagedListAsync_WithFilter_ShouldReturnFilteredResults() {
         var queryable = _context.TestEntities.AsQueryable();
         var paging = Paging.FromPaging(0, 10);
-        var filter = new Filter("Value", FilterOperator.GreaterThan, "700");
+        var filter = Filter.WithMapper("Value", FilterOperator.GreaterThan, "700", CreateMapper());
 
         var pagedQueryable = queryable
             .Where(filter)
@@ -83,7 +95,7 @@ public class PagedQueryableAsyncTest {
     public async Task ToPagedListAsync_WithSorting_ShouldReturnSortedResults() {
         var queryable = _context.TestEntities.AsQueryable();
         var paging = Paging.FromPaging(0, 10);
-        var sorting = new Sorting("Value", SortOrder.Descending);
+        var sorting = Sorting.WithMapper("Value", SortOrder.Descending, CreateMapper());
 
         var pagedQueryable = queryable
             .OrderBy(sorting)
@@ -105,8 +117,8 @@ public class PagedQueryableAsyncTest {
     public async Task ToPagedListAsync_WithComplexQuery_ShouldReturnCorrectResults() {
         var queryable = _context.TestEntities.AsQueryable();
         var paging = Paging.FromPaging(2, 5);
-        var filter = new Filter("Value", FilterOperator.LessThan, "500");
-        var sorting = new Sorting("Value", SortOrder.Descending);
+        var filter = Filter.WithMapper("Value", FilterOperator.LessThan, "500", CreateMapper());
+        var sorting = Sorting.WithMapper("Value", SortOrder.Descending, CreateMapper());
 
         var pagedQueryable = queryable
             .Where(filter)
@@ -158,8 +170,8 @@ public class PagedQueryableAsyncTest {
     public async Task ToPagedListAsync_WithMultipleFilters_ShouldReturnCorrectResults() {
         var queryable = _context.TestEntities.AsQueryable();
         var paging = Paging.FromPaging(0, 10);
-        var filter1 = new Filter("Value", FilterOperator.GreaterThanOrEquals, "300");
-        var filter2 = new Filter("Value", FilterOperator.LessThanOrEquals, "600");
+        var filter1 = Filter.WithMapper("Value", FilterOperator.GreaterThanOrEquals, "300", CreateMapper());
+        var filter2 = Filter.WithMapper("Value", FilterOperator.LessThanOrEquals, "600", CreateMapper());
 
         var pagedQueryable = queryable
             .Where(filter1)

@@ -1,10 +1,10 @@
-# CLAUDE.md
+# AGENTS.md
 
 This file provides guidance to AI agents when working with code in this repository.
 
 ## Project Overview
 
-Pafiso is a .NET 10 library for serializing, deserializing, and applying Paging, Filtering, and Sorting to `IQueryable<T>` and `IEnumerable<T>` collections. It enables building dynamic queries from expression trees or dictionary representations (useful for query string parameters).
+Pafiso is a .NET 10 library for serializing, deserializing, and applying Paging, Filtering, and Sorting to `IQueryable<T>` and `IEnumerable<T>` collections. It supports mapping between DTOs (mapping models) and entity classes, enabling building dynamic queries from query string parameters with flexible field mappings.
 
 ## Build and Test Commands
 
@@ -26,13 +26,25 @@ dotnet test --logger "console;verbosity=detailed"
 
 ### Core Types
 
-- **`SearchParameters`** - Combines Paging, Sorting, and Filter into a single object. **Primary method**: Apply to queries via `WithSearchParameters()` extension method, which returns a transient `PagedQueryable<T>` wrapper (no query execution). Call `ToPagedListAsync()` or `ToPagedList()` to execute queries and get results with `TotalEntries` and `Entries`. Alternative: `ApplyToIQueryable<T>()` for advanced scenarios requiring separate count/paged queries. Serializes to/from dictionary for query string support.
+- **`SearchParameters`** - Combines Paging, Sorting, and Filter into a single object. **Primary method**: Apply to queries via `ApplyToIQueryable<T>()`, which returns a tuple of `(countQuery, pagedQuery)` for separate count and paged result execution. Supports field restrictions and mapper-based field resolution. Serializes to/from dictionary for query string support.
 
-- **`Filter` / `Filter<T>`** - Represents a filter condition with field(s), operator, value, and case sensitivity. Multiple fields create OR conditions. Create from expressions via `Filter.FromExpression<T>(x => x.Age > 20)`.
+- **`Filter`** - Represents a filter condition with field(s), operator, value, and case sensitivity. Multiple fields create OR conditions. **Requires a mapper** - create using `Filter.WithMapper<TMapping, TEntity>(field, operator, value, mapper)` to map DTO fields to entity fields.
 
-- **`Sorting` / `Sorting<T>`** - Represents sort order for a property. Create from expressions via `Sorting.FromExpression<T>(x => x.Name, SortOrder.Ascending)`.
+- **`Sorting`** - Represents sort order for a property. **Requires a mapper** - create using `Sorting.WithMapper<TMapping, TEntity>(propertyName, sortOrder, mapper)` to map DTO fields to entity fields.
 
 - **`Paging`** - Represents pagination as skip/take. Create via `Paging.FromPaging(page, pageSize)` or `Paging.FromSkipTake(skip, take)`.
+
+- **`MappingModel`** - Abstract base class for all mapping models (DTOs) used with the field mapper system. Provides lifecycle hooks (`OnBeforeMap()`, `OnAfterMap()`, `Validate()`).
+
+- **`IFieldMapper<TMapping, TEntity>`** - Interface for mapping field names from DTOs to entity properties. Supports custom field mappings and value transformations.
+  - `ResolveToEntityField(string)` - Resolves DTO field name to entity field name
+  - `TransformValue<TProperty>(string, string?)` - Transforms raw string values to typed values
+  - `GetMappedFields()` - Returns all valid field names from the mapping model
+
+- **`FieldMapper<TMapping, TEntity>`** - Default implementation of `IFieldMapper`. Provides fluent API:
+  - `Map(mappingField, entityField)` - Maps DTO field to entity field
+  - `MapWithTransform<TValue>(mappingField, entityField, transformer)` - Maps with value transformation
+  - `WithTransform<TValue>(mappingField, transformer)` - Registers value transformer for 1:1 mapped field
 
 - **`PafisoSettings`** - Configuration for field name mapping, case sensitivity, and EF Core integration. Key properties:
   - `PropertyNamingPolicy` - Uses `System.Text.Json.JsonNamingPolicy` (CamelCase, SnakeCaseLower, etc.)
@@ -47,14 +59,7 @@ dotnet test --logger "console;verbosity=detailed"
 
 ### Result Types
 
-- **`PagedQueryable<T>`** / **`PagedEnumerable<T>`** - Transient query wrappers returned by `WithSearchParameters()`. No query execution occurs until materialization methods are called.
-- **`PagedList<T>`** - Materialized result containing `Entries` (List<T>) and `TotalEntries` (int). Obtained by calling `ToPagedListAsync()` or `ToPagedList()` on a `PagedQueryable<T>`.
-
-### Extension Methods (in `Pafiso.Util`)
-
-- `IQueryable<T>.Where(Filter)` - Apply filter to queryable
-- `IQueryable<T>.OrderBy(Sorting)` / `ThenBy(Sorting)` - Apply sorting
-- `IQueryable<T>.Paging(Paging)` - Apply pagination
+- **`PagedList<T>`** - Materialized result containing `Entries` (List<T>) and `TotalEntries` (int).
 
 ### Key Dependencies
 
@@ -74,73 +79,91 @@ Provides EF Core-specific expression building for optimized SQL translation:
 
 Provides ASP.NET Core integration:
 
-- **`QueryCollectionExtensions`** - `ToSearchParameters()` extension for `IQueryCollection`. Takes optional `PafisoSettings` parameter.
+- **`QueryCollectionExtensions`** - `ToSearchParameters<TMapping, TEntity>()` extension for `IQueryCollection`. Requires a mapper instance. Takes optional `PafisoSettings` parameter.
 - **`ServiceCollectionExtensions`** - `AddPafiso()` for DI registration, auto-detects MVC JSON settings and registers `PafisoSettings` as singleton
 
 ## Recommended Usage Pattern
 
-### ASP.NET Core Controllers
+### ASP.NET Core Controllers with Mapping Models
 
 ```csharp
+// Define your mapping model (DTO)
+public class ProductSearchDto : MappingModel {
+    public string? ProductName { get; set; }
+    public decimal? MinPrice { get; set; }
+    public string? Category { get; set; }
+}
+
+// Define your entity
+public class Product {
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public decimal Price { get; set; }
+    public string Category { get; set; }
+}
+
 [ApiController]
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase {
     private readonly ApplicationDbContext _dbContext;
     private readonly PafisoSettings _settings;
-    
-    // Inject PafisoSettings via constructor (registered by AddPafiso())
+    private readonly IFieldMapper<ProductSearchDto, Product> _mapper;
+
     public ProductsController(ApplicationDbContext dbContext, PafisoSettings settings) {
         _dbContext = dbContext;
         _settings = settings;
+
+        // Configure mapper (can also be registered in DI)
+        _mapper = new FieldMapper<ProductSearchDto, Product>(settings)
+            .Map(dto => dto.ProductName, entity => entity.Name)
+            .Map(dto => dto.MinPrice, entity => entity.Price);
+            // Category maps 1:1, so no explicit mapping needed
     }
-    
+
     [HttpGet]
     public async Task<IActionResult> GetProducts() {
-        // Parse query string with settings
-        var searchParams = Request.Query.ToSearchParameters(_settings);
-        
-        // WithSearchParameters returns PagedQueryable (no execution)
-        var pagedQueryable = _dbContext.Products.WithSearchParameters(searchParams);
-        
-        // ToPagedListAsync executes queries and materializes result
-        var result = await pagedQueryable.ToPagedListAsync();
-        
+        // Parse query string with mapper
+        var searchParams = Request.Query.ToSearchParameters<ProductSearchDto, Product>(_mapper, _settings);
+
+        // ApplyToIQueryable returns (countQuery, pagedQuery)
+        var (countQuery, pagedQuery) = searchParams.ApplyToIQueryable(_dbContext.Products);
+
+        // Execute queries
+        var totalCount = await countQuery.CountAsync();
+        var items = await pagedQuery.ToListAsync();
+
         return Ok(new {
-            TotalCount = result.TotalEntries,
-            Items = result.Entries
+            TotalCount = totalCount,
+            Items = items
         });
     }
 }
 ```
 
-### Getting PafisoSettings from DI
+Example query string:
+```
+GET /api/products?skip=0&take=10&filters[0][fields]=productName&filters[0][op]=contains&filters[0][val]=laptop&sortings[0][prop]=minPrice&sortings[0][ord]=asc
+```
 
-**Option 1: Constructor Injection (Recommended)**
+### Registering Mappers in DI
+
+**Recommended approach: Register mappers as singletons**
 ```csharp
-public class MyController : ControllerBase {
-    private readonly PafisoSettings _settings;
-    
-    public MyController(PafisoSettings settings) {
-        _settings = settings;
+// In Program.cs
+builder.Services.AddSingleton<IFieldMapper<ProductSearchDto, Product>>(sp => {
+    var settings = sp.GetRequiredService<PafisoSettings>();
+    return new FieldMapper<ProductSearchDto, Product>(settings)
+        .Map(dto => dto.ProductName, entity => entity.Name)
+        .Map(dto => dto.MinPrice, entity => entity.Price);
+});
+
+// In controller
+public class ProductsController : ControllerBase {
+    private readonly IFieldMapper<ProductSearchDto, Product> _mapper;
+
+    public ProductsController(IFieldMapper<ProductSearchDto, Product> mapper) {
+        _mapper = mapper;
     }
-}
-```
-
-**Option 2: Method Injection**
-```csharp
-[HttpGet]
-public async Task<IActionResult> GetProducts([FromServices] PafisoSettings settings) {
-    var searchParams = Request.Query.ToSearchParameters(settings);
-    // ...
-}
-```
-
-**Option 3: No DI (uses PafisoSettings.Default)**
-```csharp
-[HttpGet]
-public async Task<IActionResult> GetProducts() {
-    var searchParams = Request.Query.ToSearchParameters(); // Uses PafisoSettings.Default
-    // ...
 }
 ```
 
@@ -162,13 +185,19 @@ EfCoreExpressionBuilder.Register();
 
 ## Testing
 
-Tests use NUnit 4 with Shouldly for assertions. Test files mirror the core types: `FilterTest.cs`, `SortingTest.cs`, `PagingTest.cs`, `SearchParameterTest.cs`.
+Tests use NUnit 4 with Shouldly for assertions.
 
-Additional test files for settings:
-- `PafisoSettingsTest.cs` - Tests for settings class
-- `FieldNameResolverTest.cs` - Tests for field name resolution
-- `FilterWithSettingsTest.cs` - Filter integration tests with settings
-- `SortingWithSettingsTest.cs` - Sorting integration tests with settings
-- `SearchParametersWithSettingsTest.cs` - SearchParameters integration tests
+### Core Test Files
+- `ExpressionTests.cs` - Tests for expression building and utilities
+
+### Mapping Test Files (in `tests/Pafiso.Tests/Mapping/`)
+- `FieldMapperTests.cs` - Tests for FieldMapper configuration and resolution
+- `FilterWithMapperTests.cs` - Filter integration tests with mapper
+- `SortingWithMapperTests.cs` - Sorting integration tests with mapper
+- `SearchParametersWithMapperTests.cs` - SearchParameters integration tests with mapper
+
+### Package-Specific Tests
 - `EfCoreExpressionBuilderTest.cs` - EF Core expression builder tests (in Pafiso.EntityFrameworkCore.Tests)
+- `PagedQueryableAsyncTest.cs` - EF Core async paging tests (in Pafiso.EntityFrameworkCore.Tests)
+- `QueryCollectionExtensionsTest.cs` - ASP.NET Core query collection tests (in Pafiso.AspNetCore.Tests)
 - `ServiceCollectionExtensionsTest.cs` - ASP.NET Core DI tests (in Pafiso.AspNetCore.Tests)

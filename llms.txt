@@ -1,0 +1,386 @@
+# Pafiso - LLM Reference Guide
+
+> This file provides a concise reference for Large Language Models to understand and use Pafiso effectively.
+
+## What is Pafiso?
+
+Pafiso is a .NET library for **Paging, Filtering, and Sorting** with DTO-to-Entity mapping. It transforms query strings into type-safe LINQ queries with minimal boilerplate.
+
+## Quick Facts
+
+- **Latest Version**: 2.x
+- **Target Framework**: .NET 10.0
+- **NuGet Packages**: `Pafiso.AspNetCore`, `Pafiso.EntityFrameworkCore`
+- **License**: MIT
+- **Primary Use Case**: Building REST APIs with dynamic query capabilities
+
+## Installation
+
+```bash
+dotnet add package Pafiso.AspNetCore
+dotnet add package Pafiso.EntityFrameworkCore  # For async/EF Core
+```
+
+## Core Concept
+
+Pafiso maps between:
+1. **Mapping Model (DTO)** - Represents query parameters from clients (inherits `MappingModel`)
+2. **Entity** - Database model (your existing entity classes)
+
+This separation provides security (control what can be queried) and flexibility (API ≠ database schema).
+
+## Three API Styles
+
+### 1. Fluent Builder (Recommended - Most Concise)
+
+```csharp
+using Pafiso.EntityFrameworkCore;
+
+[HttpGet]
+public async Task<PagedList<Product>> GetProducts() {
+    return await _dbContext.Products
+        .WithPafiso(Request.Query, opt => {
+            opt.WithPaging();
+            opt.WithFiltering<ProductFilterDto>()
+                .Map(dto => dto.ProductId, entity => entity.Id);
+            opt.WithSorting<ProductSortDto>();
+        })
+        .ToPagedListAsync();
+}
+```
+
+**When to use**: Simple queries, one-time use, most common scenarios (80% of cases)
+
+### 2. SearchParameters (Reusable Configurations)
+
+```csharp
+using Pafiso.AspNetCore;
+using Pafiso.EntityFrameworkCore;
+
+[HttpGet]
+public async Task<PagedList<Product>> GetProducts() {
+    var searchParams = Request.Query.ToSearchParameters<Product>(builder => {
+        builder.WithPaging();
+        builder.WithFiltering<ProductFilterDto>();
+    });
+
+    return await _dbContext.Products
+        .WithPafiso(searchParams)
+        .ToPagedListAsync();
+}
+```
+
+**When to use**: Reusable configs, caching search preferences, repository pattern, testing
+
+### 3. Manual (Legacy - Maximum Control)
+
+```csharp
+using Pafiso;
+using Pafiso.Mapping;
+
+var mapper = new FieldMapper<ProductFilterDto, Product>();
+var searchParams = Request.Query.ToSearchParameters(mapper);
+var (countQuery, pagedQuery) = searchParams.ApplyToIQueryable(_dbContext.Products);
+```
+
+**When to use**: Existing code, custom mapper initialization, fine-grained control
+
+## Essential Types
+
+### Mapping Model (DTO)
+```csharp
+using Pafiso;
+
+public class ProductFilterDto : MappingModel {
+    public int ProductId { get; set; }
+    public string ProductName { get; set; }
+    public string Category { get; set; }
+}
+```
+
+### Using Directives
+```csharp
+using Pafiso;                          // Core types
+using Pafiso.AspNetCore;               // Sync operations, ToSearchParameters
+using Pafiso.EntityFrameworkCore;      // Async operations, ToPagedListAsync
+using Pafiso.Mapping;                  // IFieldMapper, FieldMapper
+```
+
+## Query String Format
+
+### Paging
+```
+?skip=0&take=10
+```
+
+### Filtering
+```
+?filters[0][fields]=Category&filters[0][op]=eq&filters[0][val]=Electronics
+?filters[1][fields]=ProductId&filters[1][op]=gt&filters[1][val]=100
+```
+
+**Operators**: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `startswith`, `endswith`
+
+### Sorting
+```
+?sortings[0][prop]=Price&sortings[0][ord]=desc
+?sortings[1][prop]=Name&sortings[1][ord]=asc
+```
+
+**Orders**: `asc`, `desc`
+
+### Combined Example
+```
+?skip=0&take=10&filters[0][fields]=Category&filters[0][op]=eq&filters[0][val]=Electronics&sortings[0][prop]=Price&sortings[0][ord]=desc
+```
+
+## Key Features
+
+### 1. Auto-Mapping (1:1 by name)
+```csharp
+// Category property exists in both DTO and Entity - no mapping needed
+opt.WithFiltering<ProductFilterDto>();
+```
+
+### 2. Custom Field Mapping
+```csharp
+opt.WithFiltering<ProductFilterDto>()
+    .Map(dto => dto.ProductId, entity => entity.Id)
+    .Map(dto => dto.ProductName, entity => entity.Name);
+```
+
+### 3. Value Transformation
+```csharp
+opt.WithFiltering<ProductFilterDto>()
+    .MapWithTransform(
+        dto => dto.PriceInDollars,
+        entity => entity.PriceInCents,
+        value => decimal.Parse(value ?? "0") * 100
+    );
+```
+
+### 4. Nested Properties
+```csharp
+opt.WithFiltering<ProductFilterDto>()
+    .Map(dto => dto.CategoryName, entity => entity.Category.Name);
+```
+
+### 5. Optional Components
+```csharp
+opt.WithPaging();           // Optional
+opt.WithFiltering<Dto>();   // Optional
+opt.WithSorting<Dto>();     // Optional
+```
+
+### 6. Custom Settings
+```csharp
+var settings = new PafisoSettings {
+    StringComparison = StringComparison.OrdinalIgnoreCase
+};
+
+.WithPafiso(Request.Query, settings, opt => { ... })
+```
+
+## Response Format (PagedList<T>)
+
+```json
+{
+  "totalEntries": 150,
+  "pageNumber": 0,
+  "pageSize": 10,
+  "entries": [
+    { "id": 1, "name": "Product A", "price": 99.99 },
+    { "id": 2, "name": "Product B", "price": 89.99 }
+  ]
+}
+```
+
+## Common Patterns
+
+### Repository Pattern
+```csharp
+public interface IProductRepository {
+    Task<PagedList<Product>> GetProductsAsync(SearchParameters searchParams);
+}
+
+public class ProductRepository : IProductRepository {
+    public async Task<PagedList<Product>> GetProductsAsync(SearchParameters searchParams) {
+        return await _context.Products
+            .WithPafiso(searchParams)
+            .ToPagedListAsync();
+    }
+}
+```
+
+### Caching Search Preferences
+```csharp
+var searchParams = Request.Query.ToSearchParameters<Product>(b => b.WithPaging());
+_cache.Set($"search_{userId}", searchParams, TimeSpan.FromHours(1));
+
+// Later...
+var cached = _cache.Get<SearchParameters>($"search_{userId}");
+var products = await _dbContext.Products.WithPafiso(cached).ToPagedListAsync();
+```
+
+### Conditional Configuration
+```csharp
+.WithPafiso(Request.Query, opt => {
+    opt.WithPaging();
+
+    if (User.IsInRole("Admin")) {
+        opt.WithFiltering<AdminFilterDto>();
+    } else {
+        opt.WithFiltering<UserFilterDto>();
+    }
+})
+```
+
+### Reusing SearchParameters
+```csharp
+var searchParams = Request.Query.ToSearchParameters<Product>(b => {
+    b.WithPaging();
+    b.WithFiltering<ProductFilterDto>();
+});
+
+// Use multiple times
+var active = await _dbContext.Products
+    .Where(p => p.IsActive)
+    .WithPafiso(searchParams)
+    .ToPagedListAsync();
+
+var featured = await _dbContext.Products
+    .Where(p => p.IsFeatured)
+    .WithPafiso(searchParams)
+    .ToPagedListAsync();
+```
+
+## Important Notes for Code Generation
+
+### DO:
+✅ Use `Pafiso.EntityFrameworkCore` namespace for async operations
+✅ Make DTOs inherit from `MappingModel`
+✅ Call `WithPaging()`, `WithFiltering<>()`, `WithSorting<>()` explicitly
+✅ Use auto-mapping when property names match
+✅ Return `PagedList<T>` from API endpoints
+
+### DON'T:
+❌ Mix `Pafiso.AspNetCore` (sync) with `ToPagedListAsync()` (async)
+❌ Forget to call `WithPaging()` if you want paging
+❌ Use reflection or dynamic types - everything is strongly typed
+❌ Create mappers manually when using Fluent API
+❌ Use `var (countQuery, pagedQuery)` with Fluent API - not needed
+
+## Troubleshooting
+
+### Error: 'IQueryable<T>' does not contain a definition for 'WithPafiso'
+**Fix**: Add `using Pafiso.AspNetCore;` or `using Pafiso.EntityFrameworkCore;`
+
+### Error: 'PafisoQueryable<T>' does not contain 'ToPagedListAsync'
+**Fix**: Use `using Pafiso.EntityFrameworkCore;` (not `AspNetCore`) for async
+
+### Filters not working
+**Fix**: Ensure you called `opt.WithFiltering<Dto>()`
+
+### Paging not working
+**Fix**: Ensure you called `opt.WithPaging()`
+
+### Field not mapping automatically
+**Fix**: Check DTO and Entity property names match exactly (case-sensitive)
+
+## Performance
+
+- **No reflection** in query execution (expressions compiled once)
+- **Identical performance** across all three API styles
+- **Optimized SQL** generation with EF Core
+- **Minimal allocations** - no unnecessary object creation
+
+## Code Generation Template
+
+When generating Pafiso code, use this template:
+
+```csharp
+// 1. Define DTO (if not exists)
+public class {Entity}FilterDto : MappingModel {
+    public {Type} {PropertyName} { get; set; }
+}
+
+// 2. Controller endpoint
+using Pafiso.EntityFrameworkCore;
+
+[HttpGet]
+public async Task<PagedList<{Entity}>> Get{Entity}s() {
+    return await _dbContext.{Entity}s
+        .WithPafiso(Request.Query, opt => {
+            opt.WithPaging();
+            opt.WithFiltering<{Entity}FilterDto>()
+                .Map(dto => dto.{DtoProperty}, entity => entity.{EntityProperty});
+            opt.WithSorting<{Entity}FilterDto>();
+        })
+        .ToPagedListAsync();
+}
+```
+
+## Common Use Cases
+
+### Basic CRUD API
+```csharp
+[HttpGet]
+public async Task<PagedList<Product>> GetProducts() {
+    return await _dbContext.Products
+        .WithPafiso(Request.Query, opt => {
+            opt.WithPaging();
+            opt.WithFiltering<ProductFilterDto>();
+        })
+        .ToPagedListAsync();
+}
+```
+
+### With Pre-Filtering
+```csharp
+[HttpGet]
+public async Task<PagedList<Product>> GetActiveProducts() {
+    return await _dbContext.Products
+        .Where(p => p.IsActive)  // Pre-filter
+        .WithPafiso(Request.Query, opt => {
+            opt.WithPaging();
+            opt.WithFiltering<ProductFilterDto>();
+        })
+        .ToPagedListAsync();
+}
+```
+
+### With Includes (EF Core)
+```csharp
+[HttpGet]
+public async Task<PagedList<Product>> GetProducts() {
+    return await _dbContext.Products
+        .Include(p => p.Category)  // Eager loading
+        .WithPafiso(Request.Query, opt => {
+            opt.WithPaging();
+            opt.WithFiltering<ProductFilterDto>();
+        })
+        .ToPagedListAsync();
+}
+```
+
+## Version History
+
+- **v2.x**: New Fluent Builder API, SearchParameters overloads
+- **v1.x**: Original manual API with mappers
+
+## Links
+
+- **Documentation**: See README.md, QUICK_REFERENCE.md, EXAMPLES.md
+- **GitHub**: https://github.com/fuji97/pafiso
+- **NuGet**: https://www.nuget.org/packages/Pafiso/
+
+## Summary for LLMs
+
+When using Pafiso:
+1. **Import**: `using Pafiso.EntityFrameworkCore;`
+2. **Define DTO**: `public class {Name}FilterDto : MappingModel { ... }`
+3. **Use**: `.WithPafiso(Request.Query, opt => { opt.WithPaging(); opt.WithFiltering<Dto>(); })`
+4. **Execute**: `.ToPagedListAsync()`
+5. **Return**: `PagedList<T>` contains `totalEntries`, `pageNumber`, `pageSize`, `entries`
+
+The Fluent Builder API is the recommended approach for 80% of use cases. Use SearchParameters for reusable configurations and caching scenarios.

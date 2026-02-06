@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Pafiso\Pafiso.csproj" />
+    <ProjectReference Include="..\Pafiso.AspNetCore\Pafiso.AspNetCore.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />

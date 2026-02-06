@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Pafiso.Enumerables;
 using Pafiso.Extensions;
+using Pafiso.Mapping;
 using Pafiso.Util;
 
 namespace Pafiso;
@@ -46,37 +48,10 @@ public class SearchParameters {
     /// <param name="query">The source queryable to apply parameters to.</param>
     /// <returns>A tuple containing the count query (before paging) and the paged query.</returns>
     public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(IQueryable<T> query) {
-        return ApplyToIQueryableInternal<T>(query, null, null);
+        return ApplyToIQueryableInternal<T>(query, null);
     }
 
-    /// <summary>
-    /// Applies search parameters to the queryable with optional field-level restrictions.
-    /// Restricted fields are silently ignored.
-    /// </summary>
-    /// <param name="query">The source queryable to apply parameters to.</param>
-    /// <param name="configureRestrictions">Optional action to configure field restrictions using a fluent builder.</param>
-    /// <returns>A tuple containing the count query (before paging) and the paged query.</returns>
-    public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(
-        IQueryable<T> query,
-        Action<FieldRestrictions>? configureRestrictions) {
-        if (configureRestrictions == null) return ApplyToIQueryableInternal<T>(query, null, null);
-        var restrictions = new FieldRestrictions();
-        configureRestrictions(restrictions);
-        return ApplyToIQueryableInternal(query, restrictions, null);
-    }
 
-    /// <summary>
-    /// Applies search parameters to the queryable with optional field-level restrictions.
-    /// Restricted fields are silently ignored.
-    /// </summary>
-    /// <param name="query">The source queryable to apply parameters to.</param>
-    /// <param name="restrictions">Optional pre-configured field restrictions instance.</param>
-    /// <returns>A tuple containing the count query (before paging) and the paged query.</returns>
-    public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(
-        IQueryable<T> query,
-        FieldRestrictions? restrictions) {
-        return ApplyToIQueryableInternal(query, restrictions, null);
-    }
 
     /// <summary>
     /// Applies search parameters to the queryable with the specified settings.
@@ -87,53 +62,21 @@ public class SearchParameters {
     public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(
         IQueryable<T> query,
         PafisoSettings? settings) {
-        return ApplyToIQueryableInternal(query, null, settings);
+        return ApplyToIQueryableInternal(query, settings);
     }
 
-    /// <summary>
-    /// Applies search parameters to the queryable with optional field-level restrictions and settings.
-    /// Restricted fields are silently ignored.
-    /// </summary>
-    /// <param name="query">The source queryable to apply parameters to.</param>
-    /// <param name="configureRestrictions">Optional action to configure field restrictions using a fluent builder.</param>
-    /// <param name="settings">The settings to use for field name resolution and string comparison.</param>
-    /// <returns>A tuple containing the count query (before paging) and the paged query.</returns>
-    public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(
-        IQueryable<T> query,
-        Action<FieldRestrictions>? configureRestrictions,
-        PafisoSettings? settings) {
-        if (configureRestrictions == null) return ApplyToIQueryableInternal<T>(query, null, settings);
-        var restrictions = new FieldRestrictions();
-        configureRestrictions(restrictions);
-        return ApplyToIQueryableInternal(query, restrictions, settings);
-    }
 
-    /// <summary>
-    /// Applies search parameters to the queryable with optional field-level restrictions and settings.
-    /// Restricted fields are silently ignored.
-    /// </summary>
-    /// <param name="query">The source queryable to apply parameters to.</param>
-    /// <param name="restrictions">Optional pre-configured field restrictions instance.</param>
-    /// <param name="settings">The settings to use for field name resolution and string comparison.</param>
-    /// <returns>A tuple containing the count query (before paging) and the paged query.</returns>
-    public (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryable<T>(
-        IQueryable<T> query,
-        FieldRestrictions? restrictions,
-        PafisoSettings? settings) {
-        return ApplyToIQueryableInternal(query, restrictions, settings);
-    }
 
     private (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryableInternal<T>(
         IQueryable<T> query,
-        FieldRestrictions? restrictions,
         PafisoSettings? settings) {
 
         if (Filters.Count != 0) {
-            query = Filters.Aggregate(query, (current, filter) => filter.ApplyFilter(current, restrictions, settings));
+            query = Filters.Aggregate(query, (current, filter) => filter.ApplyFilter(current, settings));
         }
 
         if (Sortings.Count != 0) {
-            query = ApplySortings(query, restrictions, settings);
+            query = ApplySortings(query, settings);
         }
 
         var countQuery = query;
@@ -143,24 +86,23 @@ public class SearchParameters {
         return (countQuery, query);
     }
 
-    private IQueryable<T> ApplySortings<T>(IQueryable<T> query, FieldRestrictions? restrictions, PafisoSettings? settings) {
+    private IQueryable<T> ApplySortings<T>(IQueryable<T> query, PafisoSettings? settings) {
         var distinctSortings = Sortings.DistinctBy(x => x.PropertyName).ToArray();
-        var (orderedQuery, startIndex) = GetFirstAllowedSorting(query, distinctSortings, restrictions, settings);
+        var (orderedQuery, startIndex) = GetFirstAllowedSorting(query, distinctSortings, settings);
 
         if (orderedQuery == null) return query;
 
         return distinctSortings.Skip(startIndex)
-            .Aggregate(orderedQuery, (current, sorting) => sorting.ThenApplyToIQueryable(current, restrictions, settings));
+            .Aggregate(orderedQuery, (current, sorting) => sorting.ThenApplyToIQueryable(current, settings));
     }
 
     private static (IOrderedQueryable<T>? query, int nextIndex) GetFirstAllowedSorting<T>(
         IQueryable<T> query,
         Sorting[] sortings,
-        FieldRestrictions? restrictions,
         PafisoSettings? settings) {
 
         for (var i = 0; i < sortings.Length; i++) {
-            var orderedQuery = sortings[i].ApplyToIQueryable(query, restrictions, settings);
+            var orderedQuery = sortings[i].ApplyToIQueryable(query, settings);
             if (orderedQuery != null) {
                 return (orderedQuery, i + 1);
             }
@@ -182,35 +124,94 @@ public class SearchParameters {
             .ToDictionary(x => x.Key, x => x.Value);
     }
 
-    public static SearchParameters FromDictionary(IDictionary<string, string> dict) {
+
+    /// <summary>
+    /// Creates a SearchParameters instance from a dictionary representation using a field mapper.
+    /// Field names in the dictionary will be resolved using the mapper during query execution.
+    /// </summary>
+    /// <typeparam name="TMapping">The mapping model type (DTO) that must inherit from <see cref="MappingModel"/>.</typeparam>
+    /// <typeparam name="TEntity">The entity type (database model) to map to.</typeparam>
+    /// <param name="dict">The dictionary representation of search parameters.</param>
+    /// <param name="mapper">The field mapper instance for resolving field names.</param>
+    /// <param name="jsonOptions">Optional JSON serializer options for deserialization.</param>
+    /// <returns>A new SearchParameters instance with mapper-enabled filters and sortings.</returns>
+    public static SearchParameters FromDictionary<TMapping, TEntity>(
+        IDictionary<string, string> dict,
+        IFieldMapper<TMapping, TEntity> mapper,
+        JsonSerializerOptions? jsonOptions = null)
+        where TMapping : MappingModel {
+
         var split = QueryStringHelpers.SplitQueryStringInList(dict);
 
         var paging = Paging.FromDictionary(dict);
-        var sorting = split.TryGetValue("sortings", out var value) ? value.Select(Sorting.FromDictionary) : null;
-        var filters = split.TryGetValue("filters", out var value1) ? value1.Select(Filter.FromDictionary) : null;
+
+        // Create sortings with mapper embedded
+        var sortings = new List<Sorting>();
+        if (split.TryGetValue("sortings", out var sortingDicts)) {
+            foreach (var sortingDict in sortingDicts) {
+                var propertyName = sortingDict["prop"];
+                var sortOrder = EnumExtensions.ParseEnumMember<SortOrder>(sortingDict["ord"]);
+                sortings.Add(new Sorting(propertyName, sortOrder, mapper));
+            }
+        }
+
+        // Create filters with mapper embedded
+        var filters = new List<Filter>();
+        if (split.TryGetValue("filters", out var filterDicts)) {
+            foreach (var filterDict in filterDicts) {
+                var fields = filterDict["fields"]!.Split(",");
+                var op = filterDict["op"]!;
+                filterDict.TryGetValue("val", out var val);
+                var caseSensitive = filterDict.ContainsKey("case") && filterDict["case"] == "true";
+                filters.Add(new Filter(fields, EnumExtensions.ParseEnumMember<FilterOperator>(op), val, mapper, caseSensitive));
+            }
+        }
+
         return new SearchParameters {
             Paging = paging,
-            Sortings = sorting?.ToList() ?? [],
-            Filters = filters?.ToList() ?? []
+            Sortings = sortings,
+            Filters = filters
         };
     }
 
     /// <summary>
-    /// Creates a SearchParameters instance from a dictionary representation.
-    /// Field names in the dictionary will be resolved using the specified settings.
+    /// Creates a SearchParameters instance from JSON using a field mapper.
     /// </summary>
-    /// <param name="dict">The dictionary representation of search parameters.</param>
-    /// <param name="settings">The settings to use for field name resolution (applied when ApplyToIQueryable is called).</param>
-    /// <returns>A new SearchParameters instance.</returns>
-    /// <remarks>
-    /// Note: Field name resolution is not applied during FromDictionary - the original field names are preserved.
-    /// Resolution occurs when ApplyToIQueryable is called with the same settings.
-    /// This allows the SearchParameters to be serialized and deserialized without losing the original field names.
-    /// </remarks>
-    public static SearchParameters FromDictionary(IDictionary<string, string> dict, PafisoSettings? settings) {
-        // Settings are stored for use during ApplyToIQueryable, not during parsing
-        // This allows the original field names to be preserved for serialization
-        return FromDictionary(dict);
+    /// <typeparam name="TMapping">The mapping model type (DTO) that must inherit from <see cref="MappingModel"/>.</typeparam>
+    /// <typeparam name="TEntity">The entity type (database model) to map to.</typeparam>
+    /// <param name="json">The JSON string containing search parameters.</param>
+    /// <param name="mapper">The field mapper instance for resolving field names.</param>
+    /// <param name="jsonOptions">Optional JSON serializer options for deserialization.</param>
+    /// <returns>A new SearchParameters instance with mapper-enabled filters and sortings.</returns>
+    public static SearchParameters FromJson<TMapping, TEntity>(
+        string json,
+        IFieldMapper<TMapping, TEntity> mapper,
+        JsonSerializerOptions? jsonOptions = null)
+        where TMapping : MappingModel {
+
+        // Deserialize the JSON to a temporary SearchParameters
+        var tempParams = JsonSerializer.Deserialize<SearchParameters>(json, jsonOptions);
+        if (tempParams == null) {
+            return new SearchParameters();
+        }
+
+        // Recreate filters with mapper embedded
+        var filters = new List<Filter>();
+        foreach (var filter in tempParams.Filters) {
+            filters.Add(new Filter(filter.Fields, filter.Operator, filter.Value, mapper, filter.CaseSensitive));
+        }
+
+        // Recreate sortings with mapper embedded
+        var sortings = new List<Sorting>();
+        foreach (var sorting in tempParams.Sortings) {
+            sortings.Add(new Sorting(sorting.PropertyName, sorting.SortOrder, mapper));
+        }
+
+        return new SearchParameters {
+            Paging = tempParams.Paging,
+            Sortings = sortings,
+            Filters = filters
+        };
     }
 
     protected bool Equals(SearchParameters other) {
