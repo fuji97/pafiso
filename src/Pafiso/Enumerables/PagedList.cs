@@ -1,7 +1,9 @@
 using System.Collections;
+using System.Text.Json.Serialization;
 
 namespace Pafiso.Enumerables;
 
+[JsonConverter(typeof(PagedListJsonConverterFactory))]
 public class PagedList<T> : IList<T> {
     public int TotalEntries { get; init; } = 0;
     public IList<T> Entries { get; init; } = [];
