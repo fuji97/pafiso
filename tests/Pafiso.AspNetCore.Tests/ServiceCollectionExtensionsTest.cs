@@ -153,18 +153,3 @@ public class ServiceCollectionExtensionsTest {
         settings.StringComparison.ShouldBe(StringComparison.OrdinalIgnoreCase);
     }
 }
-
-public class QueryCollectionExtensionsWithSettingsTest {
-    [SetUp]
-    public void Setup() {
-        PafisoSettings.Default = new PafisoSettings();
-    }
-
-    [TearDown]
-    public void TearDown() {
-        PafisoSettings.Default = new PafisoSettings();
-    }
-
-    // Tests for ToSearchParameters with settings have been removed as the API now requires a mapper
-    // Settings are passed to ApplyToIQueryable instead
-}

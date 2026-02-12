@@ -210,6 +210,74 @@ public class SearchParametersWithMapperTests {
     }
 
     [Test]
+    public void FromJson_WithNoFilters_CreatesSearchParametersWithSortingsAndPaging() {
+        // Arrange
+        var mapper = new FieldMapper<ProductSearchDto, Product>()
+            .Map(dto => dto.ProductName, entity => entity.Name)
+            .Map(dto => dto.MinPrice, entity => entity.Price);
+
+        // JSON with sortings and paging only (no filters)
+        var json = """
+        {
+            "Filters": [],
+            "Sortings": [{"PropertyName": "minPrice", "SortOrder": 0}],
+            "Paging": {"Take": 10, "Skip": 0}
+        }
+        """;
+
+        // Act
+        var searchParams = SearchParameters.FromJson<ProductSearchDto, Product>(json, mapper);
+
+        // Assert
+        searchParams.Filters.ShouldBeEmpty();
+        searchParams.Sortings.Count.ShouldBe(1);
+        searchParams.Paging.ShouldNotBeNull();
+    }
+
+    [Test]
+    public void FromJson_WithEmptyJson_ReturnsEmptySearchParameters() {
+        var mapper = new FieldMapper<ProductSearchDto, Product>();
+        var json = "{}";
+
+        var searchParams = SearchParameters.FromJson<ProductSearchDto, Product>(json, mapper);
+
+        searchParams.Filters.ShouldBeEmpty();
+        searchParams.Sortings.ShouldBeEmpty();
+        searchParams.Paging.ShouldBeNull();
+    }
+
+    [Test]
+    public void FromJson_WithSortingsOnly_AppliesCorrectly() {
+        // Arrange
+        var mapper = new FieldMapper<ProductSearchDto, Product>()
+            .Map(dto => dto.MinPrice, entity => entity.Price);
+
+        var json = """
+        {
+            "Filters": [],
+            "Sortings": [{"PropertyName": "minPrice", "SortOrder": 0}]
+        }
+        """;
+
+        var products = new List<Product> {
+            new() { Id = 1, Name = "Widget A", Price = 20.0m, Active = true },
+            new() { Id = 2, Name = "Widget B", Price = 10.0m, Active = true },
+            new() { Id = 3, Name = "Gadget", Price = 15.0m, Active = true }
+        }.AsQueryable();
+
+        // Act
+        var searchParams = SearchParameters.FromJson<ProductSearchDto, Product>(json, mapper);
+        var (countQuery, pagedQuery) = searchParams.ApplyToIQueryable(products);
+        var result = pagedQuery.ToList();
+
+        // Assert
+        result.Count.ShouldBe(3);
+        result[0].Price.ShouldBe(10.0m);
+        result[1].Price.ShouldBe(15.0m);
+        result[2].Price.ShouldBe(20.0m);
+    }
+
+    [Test]
     public void FromDictionary_WithMapper_MultipleFiltersAndSortings() {
         // Arrange
         var mapper = new FieldMapper<ProductSearchDto, Product>()
@@ -244,5 +312,99 @@ public class SearchParametersWithMapperTests {
         result.Count.ShouldBe(2); // Product A (30) and Product C (40) both >= 25
         result[0].Name.ShouldBe("Product A"); // Price 30 comes first
         result[1].Name.ShouldBe("Product C"); // Price 40 comes second
+    }
+
+    [Test]
+    public void OperatorPlus_CombinesSearchParameters() {
+        // Arrange
+        var mapper = new FieldMapper<ProductSearchDto, Product>()
+            .Map(dto => dto.ProductName, entity => entity.Name)
+            .Map(dto => dto.MinPrice, entity => entity.Price);
+
+        var sp1 = new SearchParameters {
+            Filters = [Filter.WithMapper("productName", FilterOperator.Contains, "Widget", mapper)],
+            Paging = Paging.FromSkipTake(0, 10)
+        };
+
+        var sp2 = new SearchParameters {
+            Sortings = [Sorting.WithMapper("minPrice", SortOrder.Ascending, mapper)]
+        };
+
+        // Act
+        var combined = sp1 + sp2;
+
+        // Assert
+        combined.Filters.Count.ShouldBe(1);
+        combined.Sortings.Count.ShouldBe(1);
+        combined.Paging.ShouldNotBeNull();
+        combined.Paging!.Skip.ShouldBe(0);
+        combined.Paging.Take.ShouldBe(10);
+    }
+
+    [Test]
+    public void OperatorPlus_LeftPagingTakesPrecedence() {
+        var sp1 = new SearchParameters { Paging = Paging.FromSkipTake(0, 5) };
+        var sp2 = new SearchParameters { Paging = Paging.FromSkipTake(10, 20) };
+
+        var combined = sp1 + sp2;
+
+        combined.Paging.ShouldNotBeNull();
+        combined.Paging!.Skip.ShouldBe(0);
+        combined.Paging.Take.ShouldBe(5);
+    }
+
+    [Test]
+    public void ToDictionary_RoundTrips_WithMapper() {
+        // Arrange
+        var mapper = new FieldMapper<ProductSearchDto, Product>()
+            .Map(dto => dto.ProductName, entity => entity.Name)
+            .Map(dto => dto.MinPrice, entity => entity.Price);
+
+        var dict = new Dictionary<string, string> {
+            ["filters[0][fields]"] = "productName",
+            ["filters[0][op]"] = "contains",
+            ["filters[0][val]"] = "Widget",
+            ["sortings[0][prop]"] = "minPrice",
+            ["sortings[0][ord]"] = "asc",
+            ["skip"] = "0",
+            ["take"] = "10"
+        };
+
+        var original = SearchParameters.FromDictionary<ProductSearchDto, Product>(dict, mapper);
+
+        // Act
+        var serialized = original.ToDictionary();
+
+        // Assert
+        serialized.ShouldContainKey("filters[0][fields]");
+        serialized.ShouldContainKey("filters[0][op]");
+        serialized.ShouldContainKey("filters[0][val]");
+        serialized.ShouldContainKey("sortings[0][prop]");
+        serialized.ShouldContainKey("sortings[0][ord]");
+        serialized.ShouldContainKey("skip");
+        serialized.ShouldContainKey("take");
+        serialized["skip"].ShouldBe("0");
+        serialized["take"].ShouldBe("10");
+    }
+
+    [Test]
+    public void Equality_SameSearchParameters_AreEqual() {
+        var mapper = new FieldMapper<ProductSearchDto, Product>()
+            .Map(dto => dto.ProductName, entity => entity.Name);
+
+        var dict = new Dictionary<string, string> {
+            ["filters[0][fields]"] = "productName",
+            ["filters[0][op]"] = "contains",
+            ["filters[0][val]"] = "Widget",
+            ["sortings[0][prop]"] = "productName",
+            ["sortings[0][ord]"] = "asc",
+            ["skip"] = "0",
+            ["take"] = "10"
+        };
+
+        var sp1 = SearchParameters.FromDictionary<ProductSearchDto, Product>(dict, mapper);
+        var sp2 = SearchParameters.FromDictionary<ProductSearchDto, Product>(dict, mapper);
+
+        (sp1 == sp2).ShouldBeTrue();
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using NUnit.Framework;
 using Pafiso.Mapping;
 using Shouldly;
@@ -132,5 +133,65 @@ public class SortingWithMapperTests {
         // Assert - Should maintain primary sort only
         result[0].Name.ShouldBe("Alice");
         result[1].Name.ShouldBe("Charlie");
+    }
+
+    [Test]
+    public void ApplyToIQueryable_WithCustomExpressionBuilder_UsesCustomBuilder() {
+        // Arrange
+        var customBuilder = new TrackingSortingExpressionBuilder();
+        var mapper = new FieldMapper<UserSearchDto, User>()
+            .Map(dto => dto.UserName, entity => entity.Name);
+
+        var users = new List<User> {
+            new() { Id = 1, Name = "Charlie", Age = 30 },
+            new() { Id = 2, Name = "Alice", Age = 25 }
+        }.AsQueryable();
+
+        var sorting = Sorting.WithMapper("userName", SortOrder.Ascending, mapper, customBuilder);
+
+        // Act
+        var result = sorting.ApplyToIQueryable(users).ToList();
+
+        // Assert
+        customBuilder.CallCount.ShouldBe(1);
+        result[0].Name.ShouldBe("Alice");
+        result[1].Name.ShouldBe("Charlie");
+    }
+
+    [Test]
+    public void ThenApplyToIQueryable_WithCustomExpressionBuilder_UsesCustomBuilder() {
+        // Arrange
+        var customBuilder = new TrackingSortingExpressionBuilder();
+        var mapper = new FieldMapper<UserSearchDto, User>()
+            .Map(dto => dto.UserAge, entity => entity.Age)
+            .Map(dto => dto.UserName, entity => entity.Name);
+
+        var users = new List<User> {
+            new() { Id = 1, Name = "Charlie", Age = 30 },
+            new() { Id = 2, Name = "Alice", Age = 30 },
+            new() { Id = 3, Name = "Bob", Age = 25 }
+        }.AsQueryable();
+
+        var primarySort = Sorting.WithMapper("userAge", SortOrder.Ascending, mapper);
+        var secondarySort = Sorting.WithMapper("userName", SortOrder.Ascending, mapper, customBuilder);
+
+        // Act
+        var orderedQuery = primarySort.ApplyToIQueryable(users);
+        var result = secondarySort.ThenApplyToIQueryable(orderedQuery).ToList();
+
+        // Assert
+        customBuilder.CallCount.ShouldBe(1);
+        result[0].Name.ShouldBe("Bob");
+        result[1].Name.ShouldBe("Alice");
+        result[2].Name.ShouldBe("Charlie");
+    }
+
+    private class TrackingSortingExpressionBuilder : ISortingExpressionBuilder {
+        public int CallCount { get; private set; }
+
+        public Expression<Func<T, object>> BuildSortingExpression<T>(string propName, string paramName = "x") {
+            CallCount++;
+            return DefaultSortingExpressionBuilder.Instance.BuildSortingExpression<T>(propName, paramName);
+        }
     }
 }
