@@ -1,7 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
-using Pafiso.Util;
 
 namespace Pafiso.EntityFrameworkCore;
 
@@ -50,7 +49,7 @@ public sealed class EfCoreExpressionBuilder : IFilterExpressionBuilder {
         string? value,
         bool caseSensitive,
         PafisoSettings settings) {
-        return ExpressionUtilities.BuildFilterExpression<T>(
+        return EfCoreExpressionUtilities.BuildFilterExpression<T>(
             propName,
             paramName,
             op,

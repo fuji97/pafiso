@@ -34,21 +34,9 @@ public class PafisoSettings {
     public bool UseJsonPropertyNameAttributes { get; set; } = true;
 
     /// <summary>
-    /// The <see cref="System.StringComparison"/> to use for case-insensitive string operations
-    /// in IEnumerable/in-memory scenarios.
+    /// The <see cref="System.StringComparison"/> to use for case-insensitive string operations.
     /// </summary>
-    /// <remarks>
-    /// This setting is used when <see cref="UseEfCoreLikeForCaseInsensitive"/> is false,
-    /// or when operating on in-memory collections.
-    /// </remarks>
     public StringComparison StringComparison { get; set; } = StringComparison.OrdinalIgnoreCase;
-
-    /// <summary>
-    /// When true, uses EF.Functions.Like for case-insensitive string matching
-    /// in EF Core scenarios (requires Pafiso.EntityFrameworkCore package).
-    /// Falls back to <see cref="StringComparison"/> for non-EF queryables.
-    /// </summary>
-    public bool UseEfCoreLikeForCaseInsensitive { get; set; } = true;
 
     /// <summary>
     /// Creates a new instance of <see cref="PafisoSettings"/> with default values.
@@ -62,7 +50,6 @@ public class PafisoSettings {
     public PafisoSettings Clone() => new() {
         PropertyNamingPolicy = PropertyNamingPolicy,
         UseJsonPropertyNameAttributes = UseJsonPropertyNameAttributes,
-        StringComparison = StringComparison,
-        UseEfCoreLikeForCaseInsensitive = UseEfCoreLikeForCaseInsensitive
+        StringComparison = StringComparison
     };
 }

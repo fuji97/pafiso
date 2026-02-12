@@ -333,6 +333,13 @@ opt.WithEfFiltering<ProductFilterDto>(new EfFilteringSettings {
 });
 ```
 
+To control EF Core LIKE usage, pass `EfCoreSettings` to `WithPafiso`:
+
+```csharp
+var settings = new EfCoreSettings { UseEfCoreLikeForCaseInsensitive = false };
+await _dbContext.Products.WithPafiso(Request.Query, settings, opt => { /* ... */ }).ToPagedListAsync();
+```
+
 ## DI Registration
 
 Register Pafiso services for dependency injection:

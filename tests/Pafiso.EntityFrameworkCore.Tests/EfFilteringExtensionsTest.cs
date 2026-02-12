@@ -4,7 +4,6 @@ using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using NUnit.Framework;
-using Pafiso.AspNetCore;
 using Pafiso.EntityFrameworkCore;
 using Pafiso.Mapping;
 using Shouldly;
@@ -168,7 +167,7 @@ public class EfFilteringExtensionsTest {
     public void EfCoreExpressionBuilder_BuildFilterExpression_WorksWithContains() {
         // Test that EfCoreExpressionBuilder builds a valid expression for string contains
         var builder = EfCoreExpressionBuilder.Instance;
-        var settings = new PafisoSettings { UseEfCoreLikeForCaseInsensitive = true };
+        var settings = new EfCoreSettings { UseEfCoreLikeForCaseInsensitive = true };
 
         // This should not throw
         var expr = builder.BuildFilterExpression<Product>(
@@ -181,7 +180,7 @@ public class EfFilteringExtensionsTest {
     [Test]
     public void EfCoreExpressionBuilder_BuildFilterExpression_WorksWithEquals() {
         var builder = EfCoreExpressionBuilder.Instance;
-        var settings = new PafisoSettings { UseEfCoreLikeForCaseInsensitive = true };
+        var settings = new EfCoreSettings { UseEfCoreLikeForCaseInsensitive = true };
 
         var expr = builder.BuildFilterExpression<Product>(
             "Name", "x", FilterOperator.Equals, "test", false, settings);

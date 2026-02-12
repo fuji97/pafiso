@@ -46,11 +46,10 @@ dotnet test --logger "console;verbosity=detailed"
   - `MapWithTransform<TValue>(mappingField, entityField, transformer)` - Maps with value transformation
   - `WithTransform<TValue>(mappingField, transformer)` - Registers value transformer for 1:1 mapped field
 
-- **`PafisoSettings`** - Configuration for field name mapping, case sensitivity, and EF Core integration. Key properties:
+- **`PafisoSettings`** - Configuration for field name mapping and case sensitivity. Key properties:
   - `PropertyNamingPolicy` - Uses `System.Text.Json.JsonNamingPolicy` (CamelCase, SnakeCaseLower, etc.)
   - `UseJsonPropertyNameAttributes` - Respects `[JsonPropertyName]` attributes on properties
   - `StringComparison` - Configurable string comparison (default: `OrdinalIgnoreCase`)
-  - `UseEfCoreLikeForCaseInsensitive` - Uses `EF.Functions.Like` for EF Core scenarios (default: `true`)
   - `PafisoSettings.Default` - Static property for global configuration
 
 - **`IFieldNameResolver`** - Interface for resolving filter/sorting field names to property names. Implementations:
@@ -68,7 +67,7 @@ Pluggable interfaces for building LINQ expressions, enabling different strategie
 - **`ISortingExpressionBuilder`** - Interface for building sorting expressions. Method: `BuildSortingExpression<T>(propName, paramName)`.
   - `DefaultSortingExpressionBuilder` - Default singleton implementation using `ExpressionUtilities`
 
-### Fluent Builder Types (in `Pafiso.AspNetCore`)
+### Fluent Builder Types (in `Pafiso.AspNetCore` and `Pafiso.EntityFrameworkCore`)
 
 - **`SearchParametersBuilder<TEntity>`** - Builder for creating `SearchParameters` from `IQueryCollection`. Methods:
   - `WithPaging()` - Enables paging
@@ -107,6 +106,9 @@ Pluggable interfaces for building LINQ expressions, enabling different strategie
 Provides EF Core-specific expression building and async support:
 
 - **`EfCoreExpressionBuilder`** - Singleton `IFilterExpressionBuilder` that provides `EF.Functions.Like` support for case-insensitive string operations. Accessed via `EfCoreExpressionBuilder.Instance`.
+
+- **`EfCoreSettings`** - Extends `PafisoSettings` with EF Core-specific behavior:
+  - `UseEfCoreLikeForCaseInsensitive` - Uses `EF.Functions.Like` for case-insensitive string matching (default: `true`)
 
 - **`EfFilteringExtensions`** - Extension methods on `SearchParametersBuilder<TEntity>`:
   - `WithEfFiltering<TMapping>()` - Shorthand for `WithFiltering<TMapping>(EfCoreExpressionBuilder.Instance)`

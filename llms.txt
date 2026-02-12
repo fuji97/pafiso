@@ -199,6 +199,9 @@ opt.WithEfFiltering<ProductFilterDto>();
 opt.WithEfFiltering<ProductFilterDto>(new EfFilteringSettings {
     CaseSensitive = true
 });
+
+// Toggle EF.Functions.Like usage
+var settings = new EfCoreSettings { UseEfCoreLikeForCaseInsensitive = false };
 ```
 
 ### 8. Pluggable Expression Builders
