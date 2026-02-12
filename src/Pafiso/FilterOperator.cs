@@ -22,5 +22,9 @@ public enum FilterOperator {
     [EnumMember(Value = "null")]
     Null,
     [EnumMember(Value = "notnull")]
-    NotNull
+    NotNull,
+    [EnumMember(Value = "startswith")]
+    StartsWith,
+    [EnumMember(Value = "endswith")]
+    EndsWith
 }
