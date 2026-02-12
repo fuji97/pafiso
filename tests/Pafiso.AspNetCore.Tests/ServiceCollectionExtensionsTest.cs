@@ -12,17 +12,6 @@ using Shouldly;
 namespace Pafiso.AspNetCore.Tests;
 
 public class ServiceCollectionExtensionsTest {
-    [SetUp]
-    public void Setup() {
-        // Reset default settings before each test
-        PafisoSettings.Default = new PafisoSettings();
-    }
-
-    [TearDown]
-    public void TearDown() {
-        PafisoSettings.Default = new PafisoSettings();
-    }
-
     [Test]
     public void AddPafiso_RegistersSettings() {
         var services = new ServiceCollection();
@@ -42,7 +31,6 @@ public class ServiceCollectionExtensionsTest {
         services.AddPafiso(settings => {
             settings.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
             settings.StringComparison = StringComparison.InvariantCultureIgnoreCase;
-            settings.UseEfCoreLikeForCaseInsensitive = false;
         });
 
         var provider = services.BuildServiceProvider();
@@ -51,21 +39,6 @@ public class ServiceCollectionExtensionsTest {
         settings.ShouldNotBeNull();
         settings!.PropertyNamingPolicy.ShouldBe(JsonNamingPolicy.CamelCase);
         settings.StringComparison.ShouldBe(StringComparison.InvariantCultureIgnoreCase);
-        settings.UseEfCoreLikeForCaseInsensitive.ShouldBeFalse();
-    }
-
-    [Test]
-    public void AddPafiso_SetsGlobalDefault() {
-        var services = new ServiceCollection();
-
-        services.AddPafiso(settings => {
-            settings.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
-        });
-
-        var provider = services.BuildServiceProvider();
-        _ = provider.GetService<PafisoSettings>();
-
-        PafisoSettings.Default.PropertyNamingPolicy.ShouldBe(JsonNamingPolicy.SnakeCaseLower);
     }
 
     [Test]
@@ -85,18 +58,6 @@ public class ServiceCollectionExtensionsTest {
         settings.ShouldBeSameAs(preConfigured);
         settings!.PropertyNamingPolicy.ShouldBe(JsonNamingPolicy.KebabCaseLower);
         settings.UseJsonPropertyNameAttributes.ShouldBeFalse();
-    }
-
-    [Test]
-    public void AddPafiso_WithPreConfiguredSettings_SetsGlobalDefault() {
-        var services = new ServiceCollection();
-        var preConfigured = new PafisoSettings {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
-
-        services.AddPafiso(preConfigured);
-
-        PafisoSettings.Default.ShouldBeSameAs(preConfigured);
     }
 
     [Test]

@@ -34,9 +34,6 @@ public static class ServiceCollectionExtensions {
                 // Apply custom configuration (can override auto-detected values)
                 configure?.Invoke(settings);
 
-                // Also set as the global default
-                PafisoSettings.Default = settings;
-
                 return settings;
             });
 
@@ -50,9 +47,6 @@ public static class ServiceCollectionExtensions {
         /// <param name="settings">The pre-configured <see cref="PafisoSettings"/> instance.</param>
         /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
         public IServiceCollection AddPafiso(PafisoSettings settings) {
-            // Set as the global default
-            PafisoSettings.Default = settings;
-
             services.AddSingleton(settings);
 
             return services;

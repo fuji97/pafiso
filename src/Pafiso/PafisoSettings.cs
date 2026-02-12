@@ -9,7 +9,7 @@ public class PafisoSettings {
     /// <summary>
     /// Global default settings instance. Can be overridden per-operation.
     /// </summary>
-    public static PafisoSettings Default { get; set; } = new();
+    public static PafisoSettings Default { get; } = new();
 
     /// <summary>
     /// The naming policy for mapping field names from query strings to property names.
