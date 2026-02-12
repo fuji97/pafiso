@@ -1,5 +1,4 @@
 using Pafiso;
-using Pafiso.AspNetCore;
 
 namespace Pafiso.EntityFrameworkCore;
 

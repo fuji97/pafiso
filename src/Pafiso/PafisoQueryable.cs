@@ -1,6 +1,6 @@
 using Pafiso.Enumerables;
 
-namespace Pafiso.AspNetCore;
+namespace Pafiso;
 
 /// <summary>
 /// Wrapper around IQueryable that provides Pafiso-specific operations.
