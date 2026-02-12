@@ -10,12 +10,12 @@ Pafiso enables building dynamic, type-safe queries from query string parameters 
 
 ## Features
 
-✨ **Fluent API** - Clean, discoverable syntax with IntelliSense support
-🔒 **Type-Safe** - Strong typing with DTO-to-Entity mapping
-🚀 **Entity Framework Core** - Full async support with optimized SQL
-⚡ **Flexible** - Multiple API styles to fit your use case
-🎯 **Auto-Mapping** - 1:1 field mapping when names match
-🔧 **Customizable** - Transform values, map nested properties
+- **Fluent API** - Clean, discoverable syntax with IntelliSense support
+- **Type-Safe** - Strong typing with DTO-to-Entity mapping
+- **Entity Framework Core** - Full async support with optimized SQL via `EF.Functions.Like`
+- **Flexible** - Multiple API styles to fit your use case
+- **Auto-Mapping** - 1:1 field mapping when names match
+- **Customizable** - Transform values, map nested properties, plug in custom expression builders
 
 ## Installation
 
@@ -62,7 +62,7 @@ using Pafiso.EntityFrameworkCore;
 [HttpGet]
 public async Task<PagedList<Product>> GetProducts() {
     return await _dbContext.Products
-        .WithPafiso(Request.Query, opt => {
+        .WithPafiso(Request.Query, configure: opt => {
             opt.WithPaging();
             opt.WithFiltering<ProductFilterDto>()
                 .Map(dto => dto.ProductId, entity => entity.Id)
@@ -103,8 +103,10 @@ Pafiso offers three API styles to fit different use cases:
 Perfect for simple, one-time queries:
 
 ```csharp
+using Pafiso.EntityFrameworkCore;
+
 var products = await _dbContext.Products
-    .WithPafiso(Request.Query, opt => {
+    .WithPafiso(Request.Query, configure: opt => {
         opt.WithPaging();
         opt.WithFiltering<ProductFilterDto>();
     })
@@ -116,6 +118,9 @@ var products = await _dbContext.Products
 Build once, reuse multiple times:
 
 ```csharp
+using Pafiso.AspNetCore;
+using Pafiso.EntityFrameworkCore;
+
 // Build SearchParameters
 var searchParams = Request.Query.ToSearchParameters<Product>(builder => {
     builder.WithPaging();
@@ -135,15 +140,15 @@ var featuredProducts = await _dbContext.Products
     .ToPagedListAsync();
 ```
 
-### Style 3: Manual (Legacy)
+### Style 3: Manual with Mapper (Legacy)
 
 For maximum control:
 
 ```csharp
-var mapper = new FieldMapper<ProductFilterDto, Product>()
+var mapper = new FieldMapper<ProductFilterDto, Product>(settings)
     .Map(dto => dto.ProductId, entity => entity.Id);
 
-var searchParams = Request.Query.ToSearchParameters(mapper);
+var searchParams = Request.Query.ToSearchParameters<ProductFilterDto, Product>(mapper);
 var (countQuery, pagedQuery) = searchParams.ApplyToIQueryable(_dbContext.Products);
 
 var totalCount = await countQuery.CountAsync();
@@ -193,7 +198,7 @@ opt.WithFiltering<ProductFilterDto>()
 All features are opt-in:
 
 ```csharp
-.WithPafiso(Request.Query, opt => {
+.WithPafiso(Request.Query, configure: opt => {
     opt.WithPaging();           // Optional
     opt.WithFiltering<Dto>();   // Optional
     opt.WithSorting<Dto>();     // Optional
@@ -234,7 +239,7 @@ var settings = new PafisoSettings {
     StringComparison = StringComparison.OrdinalIgnoreCase
 };
 
-.WithPafiso(Request.Query, settings, opt => {
+.WithPafiso(Request.Query, settings, configure: opt => {
     opt.WithFiltering<ProductFilterDto>();
 });
 ```
@@ -277,6 +282,14 @@ Single filter with multiple fields uses OR:
 
 Result: `Name LIKE '%laptop%' OR Description LIKE '%laptop%'`
 
+### Case Sensitivity
+
+Filters default to case-insensitive. Override per-filter via query string:
+
+```
+?filters[0][fields]=Name&filters[0][op]=eq&filters[0][val]=Test&filters[0][case]=true
+```
+
 ### Repository Pattern
 
 ```csharp
@@ -295,43 +308,32 @@ public class ProductRepository : IProductRepository {
 }
 ```
 
-### Caching Search Preferences
-
-```csharp
-[HttpGet]
-public async Task<PagedList<Product>> GetProducts([FromQuery] bool useLastSearch = false) {
-    SearchParameters searchParams;
-
-    if (useLastSearch) {
-        searchParams = _cache.Get<SearchParameters>($"search_{userId}");
-    } else {
-        searchParams = Request.Query.ToSearchParameters<Product>(builder => {
-            builder.WithPaging();
-            builder.WithFiltering<ProductFilterDto>();
-        });
-        _cache.Set($"search_{userId}", searchParams, TimeSpan.FromHours(1));
-    }
-
-    return await _dbContext.Products
-        .WithPafiso(searchParams)
-        .ToPagedListAsync();
-}
-```
-
 ## Entity Framework Core Optimization
 
-For optimized SQL generation with EF Core:
+For optimized SQL generation with EF Core, use `WithEfFiltering<TMapping>()` instead of `WithFiltering<TMapping>()`. This automatically uses `EF.Functions.Like` for case-insensitive string operations:
 
 ```csharp
 using Pafiso.EntityFrameworkCore;
 
-// In Program.cs
-EfCoreExpressionBuilder.Register();
+var products = await _dbContext.Products
+    .WithPafiso(Request.Query, configure: opt => {
+        opt.WithPaging();
+        opt.WithEfFiltering<ProductFilterDto>()
+            .Map(dto => dto.ProductId, entity => entity.Id);
+        opt.WithSorting<ProductFilterDto>();
+    })
+    .ToPagedListAsync();
 ```
 
-This enables `EF.Functions.Like` for case-insensitive string operations in SQL Server.
+You can also configure case sensitivity defaults:
 
-## DI Registration (Optional)
+```csharp
+opt.WithEfFiltering<ProductFilterDto>(new EfFilteringSettings {
+    CaseSensitive = true  // Default to case-sensitive matching
+});
+```
+
+## DI Registration
 
 Register Pafiso services for dependency injection:
 
@@ -343,28 +345,17 @@ var builder = WebApplication.CreateBuilder(args);
 // Register Pafiso with auto-detection of JSON settings
 builder.Services.AddPafiso();
 
-// Register custom settings
-builder.Services.Configure<PafisoSettings>(options => {
-    options.StringComparison = StringComparison.OrdinalIgnoreCase;
+// Or configure manually
+builder.Services.AddPafiso(settings => {
+    settings.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+});
+
+// Register field mappers (for legacy/manual API style)
+builder.Services.AddFieldMapper<ProductFilterDto, Product>(mapper => {
+    mapper.Map(dto => dto.ProductId, entity => entity.Id);
+    mapper.Map(dto => dto.ProductName, entity => entity.Name);
 });
 ```
-
-## Examples
-
-See [EXAMPLES.md](EXAMPLES.md) for comprehensive usage examples including:
-- Basic paging, filtering, sorting
-- Custom field mappings
-- Value transformations
-- Repository pattern
-- Conditional configurations
-- Caching strategies
-
-## Documentation
-
-- **[DESIGN_DOCS.md](DESIGN_DOCS.md)** - Architecture and design decisions
-- **[EXAMPLES.md](EXAMPLES.md)** - Comprehensive code examples
-- **[NEW_FEATURES.md](NEW_FEATURES.md)** - SearchParameters API guide
-- **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** - Upgrading from older versions
 
 ## Why Pafiso?
 
@@ -411,22 +402,22 @@ public async Task<IActionResult> GetProducts(
 [HttpGet]
 public async Task<PagedList<Product>> GetProducts() {
     return await _dbContext.Products
-        .WithPafiso(Request.Query, opt => {
+        .WithPafiso(Request.Query, configure: opt => {
             opt.WithPaging();
             opt.WithFiltering<ProductFilterDto>();
-            opt.WithSorting<ProductSortDto>();
+            opt.WithSorting<ProductFilterDto>();
         })
         .ToPagedListAsync();
 }
 ```
 
 **Benefits:**
-- ✅ 90% less boilerplate code
-- ✅ Type-safe with compile-time checking
-- ✅ Flexible query strings without code changes
-- ✅ Automatic parameter validation
-- ✅ Consistent API across endpoints
-- ✅ Testable and maintainable
+- 90% less boilerplate code
+- Type-safe with compile-time checking
+- Flexible query strings without code changes
+- Automatic parameter validation
+- Consistent API across endpoints
+- Testable and maintainable
 
 ## Performance
 
@@ -454,6 +445,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Support
 
-- 📖 [Documentation](https://github.com/fuji97/pafiso)
-- 🐛 [Issue Tracker](https://github.com/fuji97/pafiso/issues)
-- 💬 [Discussions](https://github.com/fuji97/pafiso/discussions)
+- [Documentation](https://github.com/fuji97/pafiso)
+- [Issue Tracker](https://github.com/fuji97/pafiso/issues)
+- [Discussions](https://github.com/fuji97/pafiso/discussions)
