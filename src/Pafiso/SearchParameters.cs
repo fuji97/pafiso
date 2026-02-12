@@ -51,8 +51,6 @@ public class SearchParameters {
         return ApplyToIQueryableInternal<T>(query, null);
     }
 
-
-
     /// <summary>
     /// Applies search parameters to the queryable with the specified settings.
     /// </summary>
@@ -64,8 +62,6 @@ public class SearchParameters {
         PafisoSettings? settings) {
         return ApplyToIQueryableInternal(query, settings);
     }
-
-
 
     private (IQueryable<T> countQuery, IQueryable<T> pagedQuery) ApplyToIQueryableInternal<T>(
         IQueryable<T> query,
@@ -123,7 +119,6 @@ public class SearchParameters {
         return dicts.SelectMany(dict => dict)
             .ToDictionary(x => x.Key, x => x.Value);
     }
-
 
     /// <summary>
     /// Creates a SearchParameters instance from a dictionary representation using a field mapper.
