@@ -67,7 +67,7 @@ public class SearchParametersBuilder<TEntity> {
     private readonly List<IFilterConfiguration> _filterConfigurations = [];
     private readonly List<ISortingConfiguration> _sortingConfigurations = [];
 
-    internal SearchParametersBuilder(IQueryCollection queryCollection, PafisoSettings? settings) {
+    public SearchParametersBuilder(IQueryCollection queryCollection, PafisoSettings? settings) {
         _queryCollection = queryCollection;
         _settings = settings ?? PafisoSettings.Default;
     }
@@ -92,6 +92,20 @@ public class SearchParametersBuilder<TEntity> {
         return filterBuilder;
     }
 
+    public FilterOptionsBuilder<TMapping, TEntity> WithFiltering<TMapping>(IFilterExpressionBuilder expressionBuilder)
+        where TMapping : MappingModel {
+        var filterBuilder = new FilterOptionsBuilder<TMapping, TEntity>(_settings, expressionBuilder);
+        _filterConfigurations.Add(filterBuilder);
+        return filterBuilder;
+    }
+
+    public FilterOptionsBuilder<TMapping, TEntity> WithFiltering<TMapping>(IFilterExpressionBuilder expressionBuilder, bool defaultCaseSensitive)
+        where TMapping : MappingModel {
+        var filterBuilder = new FilterOptionsBuilder<TMapping, TEntity>(_settings, expressionBuilder, defaultCaseSensitive);
+        _filterConfigurations.Add(filterBuilder);
+        return filterBuilder;
+    }
+
     /// <summary>
     /// Configures sorting using a mapping model (DTO).
     /// </summary>
@@ -104,7 +118,14 @@ public class SearchParametersBuilder<TEntity> {
         return sortingBuilder;
     }
 
-    internal SearchParameters Build() {
+    public SortingOptionsBuilder<TMapping, TEntity> WithSorting<TMapping>(ISortingExpressionBuilder expressionBuilder)
+        where TMapping : MappingModel {
+        var sortingBuilder = new SortingOptionsBuilder<TMapping, TEntity>(_settings, expressionBuilder);
+        _sortingConfigurations.Add(sortingBuilder);
+        return sortingBuilder;
+    }
+
+    public SearchParameters Build() {
         var allFilters = new List<Filter>();
         var allSortings = new List<Sorting>();
         Paging? paging = null;

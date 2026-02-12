@@ -16,10 +16,12 @@ public class SortingOptionsBuilder<TMapping, TEntity> : ISortingConfiguration
 
     private readonly FieldMapper<TMapping, TEntity> _mapper;
     private readonly PafisoSettings _settings;
+    private readonly ISortingExpressionBuilder? _expressionBuilder;
 
-    internal SortingOptionsBuilder(PafisoSettings settings) {
+    internal SortingOptionsBuilder(PafisoSettings settings, ISortingExpressionBuilder? expressionBuilder = null) {
         _settings = settings;
         _mapper = new FieldMapper<TMapping, TEntity>(settings);
+        _expressionBuilder = expressionBuilder;
     }
 
     /// <summary>
@@ -50,7 +52,8 @@ public class SortingOptionsBuilder<TMapping, TEntity> : ISortingConfiguration
                 var sorting = Sorting.WithMapper<TMapping, TEntity>(
                     propertyName,
                     sortOrder,
-                    _mapper);
+                    _mapper,
+                    _expressionBuilder);
                 sortings.Add(sorting);
             }
         }

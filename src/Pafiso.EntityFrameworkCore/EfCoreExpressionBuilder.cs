@@ -8,17 +8,10 @@ namespace Pafiso.EntityFrameworkCore;
 /// <summary>
 /// Provides EF Core-specific expression building capabilities for Pafiso.
 /// </summary>
-public static class EfCoreExpressionBuilder {
-    /// <summary>
-    /// Registers the EF Core Like expression builder with Pafiso.
-    /// This should be called during application startup.
-    /// </summary>
-    public static void Register() {
-        // Use the delegate itself as the registration check - if it's already set to our method, skip
-        if (ExpressionUtilities.EfCoreLikeExpressionBuilder == BuildLikeExpression) return;
+public sealed class EfCoreExpressionBuilder : IFilterExpressionBuilder {
+    public static EfCoreExpressionBuilder Instance { get; } = new();
 
-        ExpressionUtilities.EfCoreLikeExpressionBuilder = BuildLikeExpression;
-    }
+    private EfCoreExpressionBuilder() { }
 
     /// <summary>
     /// Builds an expression for EF.Functions.Like.
@@ -48,5 +41,22 @@ public static class EfCoreExpressionBuilder {
         // Build the call: EF.Functions.Like(member, pattern)
         var patternExpr = Expression.Constant(pattern);
         return Expression.Call(null, likeMethod, efFunctionsExpr, memberExpression, patternExpr);
+    }
+
+    public Expression<Func<T, bool>> BuildFilterExpression<T>(
+        string propName,
+        string paramName,
+        FilterOperator op,
+        string? value,
+        bool caseSensitive,
+        PafisoSettings settings) {
+        return ExpressionUtilities.BuildFilterExpression<T>(
+            propName,
+            paramName,
+            op,
+            value,
+            caseSensitive,
+            settings,
+            BuildLikeExpression);
     }
 }

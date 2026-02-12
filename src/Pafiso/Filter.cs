@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 using LinqKit;
 using Pafiso.Extensions;
 using Pafiso.Mapping;
-using Pafiso.Util;
 
 namespace Pafiso;
 
@@ -15,6 +14,7 @@ public class Filter {
 
     // Mapper is required for all filter operations
     internal readonly object _mapper;
+    internal readonly IFilterExpressionBuilder? _expressionBuilder;
 
     /// <summary>
     /// Internal constructor for deserialization only.
@@ -26,6 +26,7 @@ public class Filter {
         Value = value;
         CaseSensitive = caseSensitive;
         _mapper = null!; // Will be set by SearchParameters.FromJson
+        _expressionBuilder = null;
     }
 
     /// <summary>
@@ -49,6 +50,17 @@ public class Filter {
         return new Filter(field, @operator, value, mapper, caseSensitive);
     }
 
+    public static Filter WithMapper<TMapping, TEntity>(
+        string field,
+        FilterOperator @operator,
+        string? value,
+        IFieldMapper<TMapping, TEntity> mapper,
+        IFilterExpressionBuilder? expressionBuilder,
+        bool caseSensitive = false)
+        where TMapping : MappingModel {
+        return new Filter([field], @operator, value, mapper, expressionBuilder, caseSensitive);
+    }
+
     /// <summary>
     /// Creates a filter with mapper support for multiple fields.
     /// </summary>
@@ -62,26 +74,44 @@ public class Filter {
         return new Filter(fields, @operator, value, mapper, caseSensitive);
     }
 
+    public static Filter WithMapper<TMapping, TEntity>(
+        IEnumerable<string> fields,
+        FilterOperator @operator,
+        string? value,
+        IFieldMapper<TMapping, TEntity> mapper,
+        IFilterExpressionBuilder? expressionBuilder,
+        bool caseSensitive = false)
+        where TMapping : MappingModel {
+        return new Filter(fields, @operator, value, mapper, expressionBuilder, caseSensitive);
+    }
+
     /// <summary>
     /// Internal constructor for mapper support.
     /// </summary>
-    internal Filter(string field, FilterOperator @operator, string? value, object mapper, bool caseSensitive = false) {
-        Fields = [field];
-        Operator = @operator;
-        Value = value;
-        CaseSensitive = caseSensitive;
-        _mapper = mapper;
+    internal Filter(string field, FilterOperator @operator, string? value, object mapper, bool caseSensitive = false)
+        : this([field], @operator, value, mapper, null, caseSensitive) {
     }
 
     /// <summary>
     /// Internal constructor for mapper support with multiple fields.
     /// </summary>
-    internal Filter(IEnumerable<string> fields, FilterOperator @operator, string? value, object mapper, bool caseSensitive = false) {
+    internal Filter(IEnumerable<string> fields, FilterOperator @operator, string? value, object mapper, bool caseSensitive = false)
+        : this(fields, @operator, value, mapper, null, caseSensitive) {
+    }
+
+    internal Filter(
+        IEnumerable<string> fields,
+        FilterOperator @operator,
+        string? value,
+        object mapper,
+        IFilterExpressionBuilder? expressionBuilder,
+        bool caseSensitive = false) {
         Fields = fields.ToList();
         Operator = @operator;
         Value = value;
         CaseSensitive = caseSensitive;
         _mapper = mapper;
+        _expressionBuilder = expressionBuilder;
     }
 
     public bool Equals(Filter other) {
@@ -145,7 +175,8 @@ public class Filter {
 
 
     private Expression<Func<T, bool>> ApplyCorrectOperationWithSettings<T>(Filter filter, string field, PafisoSettings settings) {
-        return ExpressionUtilities.BuildFilterExpression<T>(field, "x", filter.Operator, filter.Value, filter.CaseSensitive, settings);
+        var builder = _expressionBuilder ?? DefaultFilterExpressionBuilder.Instance;
+        return builder.BuildFilterExpression<T>(field, "x", filter.Operator, filter.Value, filter.CaseSensitive, settings);
     }
 
     /// <summary>
@@ -193,4 +224,3 @@ public class Filter {
         return $"({string.Join(" OR ", Fields.Select(field => $"{field} {Operator} {Value}"))})";
     }
 }
-

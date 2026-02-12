@@ -19,11 +19,14 @@ public static class QueryableExtensions {
         this IQueryable<T> query,
         IQueryCollection queryCollection,
         PafisoSettings? settings = null,
-        Action<PafisoOptionsBuilder<T>>? configure = null) {
+        Action<SearchParametersBuilder<T>>? configure = null) {
 
-        var builder = new PafisoOptionsBuilder<T>(queryCollection, settings);
+        settings ??= PafisoSettings.Default;
+        var builder = new SearchParametersBuilder<T>(queryCollection, settings);
         configure?.Invoke(builder);
-        return builder.Build(query);
+        var searchParams = builder.Build();
+        var (countQuery, pagedQuery) = searchParams.ApplyToIQueryable(query, settings);
+        return new PafisoQueryable<T>(pagedQuery, countQuery, searchParams.Paging);
     }
 
     /// <summary>

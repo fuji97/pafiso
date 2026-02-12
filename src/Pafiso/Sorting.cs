@@ -3,7 +3,6 @@ using System.Linq.Expressions;
 using System.Text.Json.Serialization;
 using Pafiso.Extensions;
 using Pafiso.Mapping;
-using Pafiso.Util;
 
 namespace Pafiso;
 
@@ -13,6 +12,7 @@ public class Sorting {
 
     // Mapper is required for all sorting operations
     internal readonly object _mapper;
+    internal readonly ISortingExpressionBuilder? _expressionBuilder;
 
     /// <summary>
     /// Internal constructor for deserialization only.
@@ -22,6 +22,7 @@ public class Sorting {
         PropertyName = propertyName;
         SortOrder = sortOrder;
         _mapper = null!; // Will be set by SearchParameters.FromJson
+        _expressionBuilder = null;
     }
 
     public bool Ascending => SortOrder == SortOrder.Ascending;
@@ -44,11 +45,24 @@ public class Sorting {
         return new Sorting(propertyName, sortOrder, mapper);
     }
 
+    public static Sorting WithMapper<TMapping, TEntity>(
+        string propertyName,
+        SortOrder sortOrder,
+        IFieldMapper<TMapping, TEntity> mapper,
+        ISortingExpressionBuilder? expressionBuilder)
+        where TMapping : MappingModel {
+        return new Sorting(propertyName, sortOrder, mapper, expressionBuilder);
+    }
+
     /// <summary>
     /// Internal constructor for mapper support.
     /// </summary>
-    internal Sorting(string propertyName, SortOrder sortOrder, object mapper) : this(propertyName, sortOrder) {
+    internal Sorting(string propertyName, SortOrder sortOrder, object mapper) : this(propertyName, sortOrder, mapper, null) {
+    }
+
+    internal Sorting(string propertyName, SortOrder sortOrder, object mapper, ISortingExpressionBuilder? expressionBuilder) : this(propertyName, sortOrder) {
         _mapper = mapper;
+        _expressionBuilder = expressionBuilder;
     }
 
     public IOrderedQueryable<T> ApplyToIQueryable<T>(IQueryable<T> query) {
@@ -129,7 +143,8 @@ public class Sorting {
             return null;
         }
 
-        var expr = ExpressionUtilities.BuildLambdaExpression<T, object>(resolvedPropertyName);
+        var builder = _expressionBuilder ?? DefaultSortingExpressionBuilder.Instance;
+        var expr = builder.BuildSortingExpression<T>(resolvedPropertyName);
         return Ascending ? query.OrderBy(expr) : query.OrderByDescending(expr);
     }
 
@@ -155,7 +170,8 @@ public class Sorting {
             return query;
         }
 
-        var expr = ExpressionUtilities.BuildLambdaExpression<T, object>(resolvedPropertyName);
+        var builder = _expressionBuilder ?? DefaultSortingExpressionBuilder.Instance;
+        var expr = builder.BuildSortingExpression<T>(resolvedPropertyName);
         return Ascending ? query.ThenBy(expr) : query.ThenByDescending(expr);
     }
 
@@ -191,4 +207,3 @@ public class Sorting {
         return !left.Equals(right);
     }
 }
-

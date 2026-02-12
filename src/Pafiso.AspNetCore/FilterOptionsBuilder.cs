@@ -16,10 +16,14 @@ public class FilterOptionsBuilder<TMapping, TEntity> : IFilterConfiguration
 
     private readonly FieldMapper<TMapping, TEntity> _mapper;
     private readonly PafisoSettings _settings;
+    private readonly IFilterExpressionBuilder? _expressionBuilder;
+    private readonly bool _defaultCaseSensitive;
 
-    internal FilterOptionsBuilder(PafisoSettings settings) {
+    internal FilterOptionsBuilder(PafisoSettings settings, IFilterExpressionBuilder? expressionBuilder = null, bool defaultCaseSensitive = false) {
         _settings = settings;
         _mapper = new FieldMapper<TMapping, TEntity>(settings);
+        _expressionBuilder = expressionBuilder;
+        _defaultCaseSensitive = defaultCaseSensitive;
     }
 
     /// <summary>
@@ -63,14 +67,17 @@ public class FilterOptionsBuilder<TMapping, TEntity> : IFilterConfiguration
                 var fields = filterDict["fields"]!.Split(",");
                 var op = filterDict["op"]!;
                 filterDict.TryGetValue("val", out var val);
-                var caseSensitive = filterDict.ContainsKey("case") && filterDict["case"] == "true";
+                var caseSensitive = filterDict.ContainsKey("case")
+                    ? filterDict["case"] == "true"
+                    : _defaultCaseSensitive;
 
-                // Create filter with mapper embedded using internal constructor
+                // Create filter with mapper embedded using static factory method
                 var filter = Filter.WithMapper<TMapping, TEntity>(
                     fields,
                     EnumExtensions.ParseEnumMember<FilterOperator>(op),
                     val,
                     _mapper,
+                    _expressionBuilder,
                     caseSensitive);
                 filters.Add(filter);
             }
