@@ -11,7 +11,7 @@ public class Sorting {
     public SortOrder SortOrder { get; }
 
     // Mapper is required for all sorting operations
-    internal readonly object _mapper;
+    internal readonly IFieldResolver _mapper;
     internal readonly ISortingExpressionBuilder? _expressionBuilder;
 
     /// <summary>
@@ -57,10 +57,10 @@ public class Sorting {
     /// <summary>
     /// Internal constructor for mapper support.
     /// </summary>
-    internal Sorting(string propertyName, SortOrder sortOrder, object mapper) : this(propertyName, sortOrder, mapper, null) {
+    internal Sorting(string propertyName, SortOrder sortOrder, IFieldResolver mapper) : this(propertyName, sortOrder, mapper, null) {
     }
 
-    internal Sorting(string propertyName, SortOrder sortOrder, object mapper, ISortingExpressionBuilder? expressionBuilder) : this(propertyName, sortOrder) {
+    internal Sorting(string propertyName, SortOrder sortOrder, IFieldResolver mapper, ISortingExpressionBuilder? expressionBuilder) : this(propertyName, sortOrder) {
         _mapper = mapper;
         _expressionBuilder = expressionBuilder;
     }
@@ -76,7 +76,6 @@ public class Sorting {
         }
         return result;
     }
-
 
     /// <summary>
     /// Applies sorting to the queryable with the specified settings.
@@ -96,7 +95,6 @@ public class Sorting {
         return result;
     }
 
-
     public IOrderedQueryable<T> ThenApplyToIQueryable<T>(IOrderedQueryable<T> query) {
         if (_mapper == null) {
             throw new InvalidOperationException(
@@ -104,7 +102,6 @@ public class Sorting {
         }
         return ThenApplySortingWithMapper<T>(query, null);
     }
-
 
     /// <summary>
     /// Applies secondary sorting to the queryable with the specified settings.
@@ -120,25 +117,13 @@ public class Sorting {
         return ThenApplySortingWithMapper<T>(query, settings);
     }
 
-
     /// <summary>
     /// Applies sorting using the configured mapper for field resolution.
     /// </summary>
     private IOrderedQueryable<T>? ApplySortingWithMapper<T>(IQueryable<T> query, PafisoSettings? settings) {
-        if (_mapper == null) {
-            throw new InvalidOperationException("Mapper is not configured.");
-        }
-
-        // Use reflection to call ResolveToEntityField on the mapper
-        var mapperType = _mapper.GetType();
-        var resolveMethod = mapperType.GetMethod("ResolveToEntityField");
-        if (resolveMethod == null) {
-            throw new InvalidOperationException("Mapper does not have ResolveToEntityField method.");
-        }
-
         // Resolve the property name using the mapper
         // The mapper returns null for invalid/restricted fields, which are silently ignored
-        var resolvedPropertyName = resolveMethod.Invoke(_mapper, new object[] { PropertyName }) as string;
+        var resolvedPropertyName = _mapper.ResolveToEntityField(PropertyName);
         if (resolvedPropertyName == null) {
             return null;
         }
@@ -152,20 +137,9 @@ public class Sorting {
     /// Applies secondary sorting using the configured mapper for field resolution.
     /// </summary>
     private IOrderedQueryable<T> ThenApplySortingWithMapper<T>(IOrderedQueryable<T> query, PafisoSettings? settings) {
-        if (_mapper == null) {
-            throw new InvalidOperationException("Mapper is not configured.");
-        }
-
-        // Use reflection to call ResolveToEntityField on the mapper
-        var mapperType = _mapper.GetType();
-        var resolveMethod = mapperType.GetMethod("ResolveToEntityField");
-        if (resolveMethod == null) {
-            throw new InvalidOperationException("Mapper does not have ResolveToEntityField method.");
-        }
-
         // Resolve the property name using the mapper
         // The mapper returns null for invalid/restricted fields, which are silently ignored
-        var resolvedPropertyName = resolveMethod.Invoke(_mapper, new object[] { PropertyName }) as string;
+        var resolvedPropertyName = _mapper.ResolveToEntityField(PropertyName);
         if (resolvedPropertyName == null) {
             return query;
         }
@@ -181,7 +155,6 @@ public class Sorting {
             { "ord", SortOrder.ToEnumMemberValue() }
         };
     }
-
 
     public override string ToString() {
         return $"{PropertyName} ({SortOrder})";

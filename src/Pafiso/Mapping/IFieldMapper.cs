@@ -6,7 +6,7 @@ namespace Pafiso.Mapping;
 /// </summary>
 /// <typeparam name="TMapping">The mapping model type (DTO) that must inherit from <see cref="MappingModel"/>.</typeparam>
 /// <typeparam name="TEntity">The entity type (database model) to map to.</typeparam>
-public interface IFieldMapper<TMapping, TEntity> where TMapping : MappingModel {
+public interface IFieldMapper<TMapping, TEntity> : IFieldResolver where TMapping : MappingModel {
     /// <summary>
     /// Resolves a field name from the mapping model to the corresponding entity field name.
     /// </summary>
@@ -23,7 +23,7 @@ public interface IFieldMapper<TMapping, TEntity> where TMapping : MappingModel {
     /// 4. Verify property exists on entity
     /// Returns null for invalid fields rather than throwing exceptions.
     /// </remarks>
-    string? ResolveToEntityField(string mappingFieldName);
+    new string? ResolveToEntityField(string mappingFieldName);
 
     /// <summary>
     /// Transforms a raw value from the request into a typed value for filtering or sorting.

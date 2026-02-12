@@ -13,7 +13,7 @@ public class Filter {
     public bool CaseSensitive { get; } = false;
 
     // Mapper is required for all filter operations
-    internal readonly object _mapper;
+    internal readonly IFieldResolver _mapper;
     internal readonly IFilterExpressionBuilder? _expressionBuilder;
 
     /// <summary>
@@ -88,14 +88,14 @@ public class Filter {
     /// <summary>
     /// Internal constructor for mapper support.
     /// </summary>
-    internal Filter(string field, FilterOperator @operator, string? value, object mapper, bool caseSensitive = false)
+    internal Filter(string field, FilterOperator @operator, string? value, IFieldResolver mapper, bool caseSensitive = false)
         : this([field], @operator, value, mapper, null, caseSensitive) {
     }
 
     /// <summary>
     /// Internal constructor for mapper support with multiple fields.
     /// </summary>
-    internal Filter(IEnumerable<string> fields, FilterOperator @operator, string? value, object mapper, bool caseSensitive = false)
+    internal Filter(IEnumerable<string> fields, FilterOperator @operator, string? value, IFieldResolver mapper, bool caseSensitive = false)
         : this(fields, @operator, value, mapper, null, caseSensitive) {
     }
 
@@ -103,7 +103,7 @@ public class Filter {
         IEnumerable<string> fields,
         FilterOperator @operator,
         string? value,
-        object mapper,
+        IFieldResolver mapper,
         IFilterExpressionBuilder? expressionBuilder,
         bool caseSensitive = false) {
         Fields = fields.ToList();
@@ -149,7 +149,6 @@ public class Filter {
         return dict;
     }
 
-
     public IQueryable<T> ApplyFilter<T>(IQueryable<T> query) {
         if (_mapper == null) {
             throw new InvalidOperationException(
@@ -157,7 +156,6 @@ public class Filter {
         }
         return ApplyFilterWithMapper<T>(query, null);
     }
-
 
     /// <summary>
     /// Applies a filter to the queryable with the specified settings.
@@ -173,7 +171,6 @@ public class Filter {
         return ApplyFilterWithMapper<T>(query, settings);
     }
 
-
     private Expression<Func<T, bool>> ApplyCorrectOperationWithSettings<T>(Filter filter, string field, PafisoSettings settings) {
         var builder = _expressionBuilder ?? DefaultFilterExpressionBuilder.Instance;
         return builder.BuildFilterExpression<T>(field, "x", filter.Operator, filter.Value, filter.CaseSensitive, settings);
@@ -183,18 +180,7 @@ public class Filter {
     /// Applies filter using the configured mapper for field resolution.
     /// </summary>
     private IQueryable<T> ApplyFilterWithMapper<T>(IQueryable<T> query, PafisoSettings? settings) {
-        if (_mapper == null) {
-            throw new InvalidOperationException("Mapper is not configured.");
-        }
-
         settings ??= PafisoSettings.Default;
-
-        // Use reflection to call ResolveToEntityField on the mapper
-        var mapperType = _mapper.GetType();
-        var resolveMethod = mapperType.GetMethod("ResolveToEntityField");
-        if (resolveMethod == null) {
-            throw new InvalidOperationException("Mapper does not have ResolveToEntityField method.");
-        }
 
         var predicatesBuilder = PredicateBuilder.New<T>();
         var resolvedFields = new List<string>();
@@ -202,7 +188,7 @@ public class Filter {
         // Resolve each field using the mapper
         // The mapper returns null for invalid/restricted fields, which are silently ignored
         foreach (var field in Fields) {
-            var resolvedField = resolveMethod.Invoke(_mapper, new object[] { field }) as string;
+            var resolvedField = _mapper.ResolveToEntityField(field);
             if (resolvedField != null) {
                 resolvedFields.Add(resolvedField);
             }
