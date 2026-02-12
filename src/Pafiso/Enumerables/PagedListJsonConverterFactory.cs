@@ -25,8 +25,8 @@ public class PagedListJsonConverter<T> : JsonConverter<PagedList<T>> {
 
         IList<T> entries = [];
         var totalEntries = 0;
-        var pageNumber = 1;
-        var pageSize = 0;
+        int? pageNumber = null;
+        int? pageSize = null;
 
         while (reader.Read()) {
             if (reader.TokenType == JsonTokenType.EndObject) {
@@ -48,10 +48,10 @@ public class PagedListJsonConverter<T> : JsonConverter<PagedList<T>> {
                     totalEntries = reader.GetInt32();
                     break;
                 case var name when string.Equals(name, nameof(PagedList<T>.PageNumber), StringComparison.OrdinalIgnoreCase):
-                    pageNumber = reader.GetInt32();
+                    pageNumber = reader.TokenType == JsonTokenType.Null ? null : reader.GetInt32();
                     break;
                 case var name when string.Equals(name, nameof(PagedList<T>.PageSize), StringComparison.OrdinalIgnoreCase):
-                    pageSize = reader.GetInt32();
+                    pageSize = reader.TokenType == JsonTokenType.Null ? null : reader.GetInt32();
                     break;
                 default:
                     reader.Skip();
@@ -71,8 +71,18 @@ public class PagedListJsonConverter<T> : JsonConverter<PagedList<T>> {
         JsonSerializer.Serialize(writer, value.Entries, options);
 
         writer.WriteNumber(namingPolicy?.ConvertName(nameof(PagedList<T>.TotalEntries)) ?? nameof(PagedList<T>.TotalEntries), value.TotalEntries);
-        writer.WriteNumber(namingPolicy?.ConvertName(nameof(PagedList<T>.PageNumber)) ?? nameof(PagedList<T>.PageNumber), value.PageNumber);
-        writer.WriteNumber(namingPolicy?.ConvertName(nameof(PagedList<T>.PageSize)) ?? nameof(PagedList<T>.PageSize), value.PageSize);
+
+        var pageNumberName = namingPolicy?.ConvertName(nameof(PagedList<T>.PageNumber)) ?? nameof(PagedList<T>.PageNumber);
+        if (value.PageNumber.HasValue)
+            writer.WriteNumber(pageNumberName, value.PageNumber.Value);
+        else
+            writer.WriteNull(pageNumberName);
+
+        var pageSizeName = namingPolicy?.ConvertName(nameof(PagedList<T>.PageSize)) ?? nameof(PagedList<T>.PageSize);
+        if (value.PageSize.HasValue)
+            writer.WriteNumber(pageSizeName, value.PageSize.Value);
+        else
+            writer.WriteNull(pageSizeName);
 
         writer.WriteEndObject();
     }

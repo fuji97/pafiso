@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Pafiso.AspNetCore;
 using Pafiso.Enumerables;
 
 namespace Pafiso.EntityFrameworkCore;
@@ -71,9 +70,9 @@ public class PafisoQueryableAsync<T> {
     /// <returns>A paged list containing the results and pagination metadata.</returns>
     public async Task<PagedList<T>> ToPagedListAsync(CancellationToken cancellationToken = default) {
         if (_pafisoQueryable.Paging == null) {
-            // No paging configured - return all items as a single page
+            // No paging configured - return all items without paging metadata
             var items = await _pafisoQueryable.PagedQuery.ToListAsync(cancellationToken);
-            return new PagedList<T>(items, items.Count, 1, items.Count);
+            return new PagedList<T>(items, items.Count, null, null);
         }
 
         var totalCount = await _pafisoQueryable.CountQuery.CountAsync(cancellationToken);

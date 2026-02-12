@@ -40,9 +40,9 @@ public class PafisoQueryable<T> {
     /// <returns>A paged list containing the results and pagination metadata.</returns>
     public PagedList<T> ToPagedList() {
         if (Paging == null) {
-            // No paging configured - return all items as a single page
+            // No paging configured - return all items without paging metadata
             var items = PagedQuery.ToList();
-            return new PagedList<T>(items, items.Count, 1, items.Count);
+            return new PagedList<T>(items, items.Count, null, null);
         }
 
         var totalCount = CountQuery.Count();
