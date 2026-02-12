@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
+using Pafiso.Mapping;
 using Pafiso.Util;
 
-namespace Pafiso.AspNetCore;
+namespace Pafiso.EntityFrameworkCore;
 
 /// <summary>
 /// Pre-parsed query string data to avoid redundant parsing.

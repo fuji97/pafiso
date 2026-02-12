@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 using Pafiso.Extensions;
 using Pafiso.Mapping;
 
-namespace Pafiso.AspNetCore;
+namespace Pafiso.EntityFrameworkCore;
 
 /// <summary>
 /// Builder for configuring sorting with field mappings.
