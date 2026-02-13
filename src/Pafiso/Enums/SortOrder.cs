@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 
-namespace Pafiso;
+namespace Pafiso.Enums;
 
 public enum SortOrder {
     [EnumMember(Value = "asc")]

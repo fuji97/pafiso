@@ -1,6 +1,8 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
+using Pafiso.Enums;
+using Pafiso.Expressions;
 
 namespace Pafiso.EntityFrameworkCore;
 

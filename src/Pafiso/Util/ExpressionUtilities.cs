@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Pafiso.Enums;
 
 namespace Pafiso.Util; 
 

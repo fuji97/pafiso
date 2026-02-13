@@ -1,4 +1,6 @@
 using System.Linq.Expressions;
+using Pafiso.Enums;
+using Pafiso.Expressions;
 using Pafiso.Extensions;
 using Pafiso.Mapping;
 

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
 using Pafiso.EntityFrameworkCore.Enumerables;
+using Pafiso.Enums;
 using Pafiso.Extensions;
 using Pafiso.Mapping;
 using Shouldly;

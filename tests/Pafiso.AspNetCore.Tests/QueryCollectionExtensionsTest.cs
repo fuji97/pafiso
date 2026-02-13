@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using NUnit.Framework;
 using Pafiso.AspNetCore;
+using Pafiso.Enums;
 using Pafiso.Mapping;
 using Shouldly;
 

@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using Pafiso.Util;
 
-namespace Pafiso;
+namespace Pafiso.Expressions;
 
 public sealed class DefaultSortingExpressionBuilder : ISortingExpressionBuilder {
     public static DefaultSortingExpressionBuilder Instance { get; } = new();

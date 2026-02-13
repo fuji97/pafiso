@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 
-namespace Pafiso;
+namespace Pafiso.Enums;
 
 public enum FilterOperator {
     [EnumMember(Value = "eq")]

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Pafiso.Enumerables;
+using Pafiso.Enums;
 using Pafiso.Extensions;
 using Pafiso.Mapping;
 using Pafiso.Util;
@@ -84,25 +85,12 @@ public class SearchParameters {
 
     private IQueryable<T> ApplySortings<T>(IQueryable<T> query, PafisoSettings? settings) {
         var distinctSortings = Sortings.DistinctBy(x => x.PropertyName).ToArray();
-        var (orderedQuery, startIndex) = GetFirstAllowedSorting(query, distinctSortings, settings);
+        if (distinctSortings.Length == 0) return query;
 
-        if (orderedQuery == null) return query;
+        var orderedQuery = distinctSortings[0].ApplyToIQueryable(query, settings);
 
-        return distinctSortings.Skip(startIndex)
+        return distinctSortings.Skip(1)
             .Aggregate(orderedQuery, (current, sorting) => sorting.ThenApplyToIQueryable(current, settings));
-    }
-
-    private static (IOrderedQueryable<T>? query, int nextIndex) GetFirstAllowedSorting<T>(
-        IQueryable<T> query,
-        Sorting[] sortings,
-        PafisoSettings? settings) {
-
-        for (var i = 0; i < sortings.Length; i++) {
-            var orderedQuery = sortings[i].ApplyToIQueryable(query, settings);
-            return (orderedQuery, i + 1);
-        }
-
-        return (null, sortings.Length);
     }
 
     public IDictionary<string, string> ToDictionary() {

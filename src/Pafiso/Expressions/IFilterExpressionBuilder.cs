@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
+using Pafiso.Enums;
 
-namespace Pafiso;
+namespace Pafiso.Expressions;
 
 public interface IFilterExpressionBuilder {
     Expression<Func<T, bool>> BuildFilterExpression<T>(

@@ -1,7 +1,8 @@
 using System.Linq.Expressions;
+using Pafiso.Enums;
 using Pafiso.Util;
 
-namespace Pafiso;
+namespace Pafiso.Expressions;
 
 public sealed class DefaultFilterExpressionBuilder : IFilterExpressionBuilder {
     public static DefaultFilterExpressionBuilder Instance { get; } = new();

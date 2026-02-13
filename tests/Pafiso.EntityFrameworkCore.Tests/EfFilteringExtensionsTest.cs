@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using NUnit.Framework;
 using Pafiso.EntityFrameworkCore;
+using Pafiso.Enums;
 using Pafiso.Mapping;
 using Shouldly;
 
