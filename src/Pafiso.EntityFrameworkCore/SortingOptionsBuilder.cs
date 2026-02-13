@@ -1,4 +1,6 @@
 using System.Linq.Expressions;
+using Pafiso.Enums;
+using Pafiso.Expressions;
 using Pafiso.Extensions;
 using Pafiso.Mapping;
 
@@ -38,19 +40,19 @@ public class SortingOptionsBuilder<TMapping, TEntity> : ISortingConfiguration
 
     List<Sorting> ISortingConfiguration.ParseSortings(ParsedQueryData data) {
         var sortings = new List<Sorting>();
-        if (data.Split.TryGetValue("sortings", out var sortingDicts)) {
-            foreach (var sortingDict in sortingDicts) {
-                var propertyName = sortingDict["prop"];
-                var sortOrder = EnumExtensions.ParseEnumMember<SortOrder>(sortingDict["ord"]);
+        if (!data.Split.TryGetValue("sortings", out var sortingDicts)) return sortings;
+        
+        foreach (var sortingDict in sortingDicts) {
+            var propertyName = sortingDict["prop"];
+            var sortOrder = EnumExtensions.ParseEnumMember<SortOrder>(sortingDict["ord"]);
 
-                // Create sorting with mapper embedded using static factory method
-                var sorting = Sorting.WithMapper<TMapping, TEntity>(
-                    propertyName,
-                    sortOrder,
-                    _mapper,
-                    _expressionBuilder);
-                sortings.Add(sorting);
-            }
+            // Create sorting with mapper embedded using static factory method
+            var sorting = Sorting.WithMapper(
+                propertyName,
+                sortOrder,
+                _mapper,
+                _expressionBuilder);
+            sortings.Add(sorting);
         }
 
         return sortings;

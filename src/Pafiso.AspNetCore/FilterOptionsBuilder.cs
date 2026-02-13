@@ -64,12 +64,12 @@ public class FilterOptionsBuilder<TMapping, TEntity> : IFilterConfiguration
                 var fields = filterDict["fields"]!.Split(",");
                 var op = filterDict["op"]!;
                 filterDict.TryGetValue("val", out var val);
-                var caseSensitive = filterDict.ContainsKey("case")
-                    ? filterDict["case"] == "true"
+                var caseSensitive = filterDict.TryGetValue("case", out var value)
+                    ? value == "true"
                     : _defaultCaseSensitive;
 
                 // Create filter with mapper embedded using static factory method
-                var filter = Filter.WithMapper<TMapping, TEntity>(
+                var filter = Filter.WithMapper(
                     fields,
                     EnumExtensions.ParseEnumMember<FilterOperator>(op),
                     val,
