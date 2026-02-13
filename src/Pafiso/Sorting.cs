@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Linq.Expressions;
 using System.Text.Json.Serialization;
+using Pafiso.Enums;
+using Pafiso.Expressions;
 using Pafiso.Extensions;
 using Pafiso.Mapping;
 
@@ -11,8 +13,8 @@ public class Sorting {
     public SortOrder SortOrder { get; }
 
     // Mapper is required for all sorting operations
-    internal readonly IFieldResolver _mapper;
-    internal readonly ISortingExpressionBuilder? _expressionBuilder;
+    private readonly IFieldResolver _mapper;
+    private readonly ISortingExpressionBuilder? _expressionBuilder;
 
     /// <summary>
     /// Internal constructor for deserialization only.
@@ -70,7 +72,7 @@ public class Sorting {
             throw new InvalidOperationException(
                 "Sorting requires a mapper. Use Sorting.WithMapper<TMapping, TEntity>() to create sortings with mapping models.");
         }
-        var result = ApplySortingWithMapper<T>(query, null);
+        var result = ApplySortingWithMapper<T>(query);
         if (result == null) {
             throw new InvalidOperationException($"Cannot apply sorting: field '{PropertyName}' does not map to a valid entity property.");
         }
@@ -88,7 +90,7 @@ public class Sorting {
             throw new InvalidOperationException(
                 "Sorting requires a mapper. Use Sorting.WithMapper<TMapping, TEntity>() to create sortings with mapping models.");
         }
-        var result = ApplySortingWithMapper<T>(query, settings);
+        var result = ApplySortingWithMapper<T>(query);
         if (result == null) {
             throw new InvalidOperationException($"Cannot apply sorting: field '{PropertyName}' does not map to a valid entity property.");
         }
@@ -100,7 +102,7 @@ public class Sorting {
             throw new InvalidOperationException(
                 "Sorting requires a mapper. Use Sorting.WithMapper<TMapping, TEntity>() to create sortings with mapping models.");
         }
-        return ThenApplySortingWithMapper<T>(query, null);
+        return ThenApplySortingWithMapper<T>(query);
     }
 
     /// <summary>
@@ -114,13 +116,13 @@ public class Sorting {
             throw new InvalidOperationException(
                 "Sorting requires a mapper. Use Sorting.WithMapper<TMapping, TEntity>() to create sortings with mapping models.");
         }
-        return ThenApplySortingWithMapper<T>(query, settings);
+        return ThenApplySortingWithMapper<T>(query);
     }
 
     /// <summary>
     /// Applies sorting using the configured mapper for field resolution.
     /// </summary>
-    private IOrderedQueryable<T>? ApplySortingWithMapper<T>(IQueryable<T> query, PafisoSettings? settings) {
+    private IOrderedQueryable<T>? ApplySortingWithMapper<T>(IQueryable<T> query) {
         // Resolve the property name using the mapper
         // The mapper returns null for invalid/restricted fields, which are silently ignored
         var resolvedPropertyName = _mapper.ResolveToEntityField(PropertyName);
@@ -136,7 +138,7 @@ public class Sorting {
     /// <summary>
     /// Applies secondary sorting using the configured mapper for field resolution.
     /// </summary>
-    private IOrderedQueryable<T> ThenApplySortingWithMapper<T>(IOrderedQueryable<T> query, PafisoSettings? settings) {
+    private IOrderedQueryable<T> ThenApplySortingWithMapper<T>(IOrderedQueryable<T> query) {
         // Resolve the property name using the mapper
         // The mapper returns null for invalid/restricted fields, which are silently ignored
         var resolvedPropertyName = _mapper.ResolveToEntityField(PropertyName);
