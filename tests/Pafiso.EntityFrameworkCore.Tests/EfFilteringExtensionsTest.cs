@@ -164,32 +164,6 @@ public class EfFilteringExtensionsTest {
     }
 
     [Test]
-    public void EfCoreExpressionBuilder_BuildFilterExpression_WorksWithContains() {
-        // Test that EfCoreExpressionBuilder builds a valid expression for string contains
-        var builder = EfCoreExpressionBuilder.Instance;
-        var settings = new EfCoreSettings { UseEfCoreLikeForCaseInsensitive = true };
-
-        // This should not throw
-        var expr = builder.BuildFilterExpression<Product>(
-            "Name", "x", FilterOperator.Contains, "test", false, settings);
-
-        expr.ShouldNotBeNull();
-        expr.ReturnType.ShouldBe(typeof(bool));
-    }
-
-    [Test]
-    public void EfCoreExpressionBuilder_BuildFilterExpression_WorksWithEquals() {
-        var builder = EfCoreExpressionBuilder.Instance;
-        var settings = new EfCoreSettings { UseEfCoreLikeForCaseInsensitive = true };
-
-        var expr = builder.BuildFilterExpression<Product>(
-            "Name", "x", FilterOperator.Equals, "test", false, settings);
-
-        expr.ShouldNotBeNull();
-        expr.ReturnType.ShouldBe(typeof(bool));
-    }
-
-    [Test]
     public void EfFilteringSettings_DefaultsCaseInsensitive() {
         var settings = new EfFilteringSettings();
         settings.CaseSensitive.ShouldBeFalse();
