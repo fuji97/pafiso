@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Linq.Expressions;
 
 namespace Pafiso.Enumerables;
@@ -30,10 +30,16 @@ public class PagedQueryable<T>(IQueryable<T> countQuery, IQueryable<T> entriesQu
 }
 
 public static class PagedQueryableExtensions {
-    public static PagedQueryable<T> WithSearchParameters<T>(this IQueryable<T> query, SearchParameters searchParameters,
-        Func<IQueryable<T>, IQueryable<T>>? applyQuery = null) {
-        var entriesQuery = applyQuery?.Invoke(query) ?? query;
+    public static PagedQueryable<T> WithSearchParameters<T>(this IQueryable<T> query, SearchParameters searchParameters) {
+        var (countQuery, pagedQuery) = searchParameters.ApplyToIQueryable(query);
+        return new PagedQueryable<T>(countQuery, pagedQuery);
+    }
 
-        return new PagedQueryable<T>(query, entriesQuery);
+    public static PagedQueryable<T> WithSearchParameters<T>(
+        this IQueryable<T> query,
+        SearchParameters searchParameters,
+        PafisoSettings? settings) {
+        var (countQuery, pagedQuery) = searchParameters.ApplyToIQueryable(query, settings);
+        return new PagedQueryable<T>(countQuery, pagedQuery);
     }
 }

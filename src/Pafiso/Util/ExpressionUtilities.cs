@@ -1,8 +1,10 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
+using Pafiso.Enums;
 
 namespace Pafiso.Util; 
 
 public static class ExpressionUtilities {
+
     public static string ExpressionDecomposer(Expression expr) {
         while (true) {
             switch (expr) {
@@ -21,8 +23,6 @@ public static class ExpressionUtilities {
                 default:
                     throw new ArgumentException("Expression must be a member or unary expression");
             }
-
-            break;
         }
     }
 
@@ -57,8 +57,14 @@ public static class ExpressionUtilities {
         var path = ExpressionDecomposer(expr.Object);
         switch (expr.Method.Name) {
                 case "Contains":
-                    var value = GetMethodArgumentValues(expr).FirstOrDefault();
-                    return (path, FilterOperator.Contains, value);
+                    var containsValue = GetMethodArgumentValues(expr).FirstOrDefault();
+                    return (path, FilterOperator.Contains, containsValue);
+                case "StartsWith":
+                    var startsWithValue = GetMethodArgumentValues(expr).FirstOrDefault();
+                    return (path, FilterOperator.StartsWith, startsWithValue);
+                case "EndsWith":
+                    var endsWithValue = GetMethodArgumentValues(expr).FirstOrDefault();
+                    return (path, FilterOperator.EndsWith, endsWithValue);
         }
         throw new InvalidOperationException("Unsupported expression");
     }
@@ -202,6 +208,128 @@ public static class ExpressionUtilities {
             return Expression.Not(methodCallExpression);
         }
     }
+
+    private static Expression BuildStartsWithExpression<T>(Expression memberExpression, string? value, bool caseSensitive) {
+        if (value == null) {
+            return Expression.Constant(false);
+        }
+
+        var valueParam = Expression.Constant(value);
+
+        if (memberExpression.Type != typeof(string)) {
+            memberExpression = Expression.Convert(memberExpression, typeof(string));
+        }
+
+        var startsWithMethod = typeof(string).GetMethod(nameof(string.StartsWith), [typeof(string)])!;
+        if (!caseSensitive) {
+            var lowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!;
+            memberExpression = Expression.Call(memberExpression, lowerMethod);
+        }
+        return Expression.Call(memberExpression, startsWithMethod, valueParam);
+    }
+
+    private static Expression BuildEndsWithExpression<T>(Expression memberExpression, string? value, bool caseSensitive) {
+        if (value == null) {
+            return Expression.Constant(false);
+        }
+
+        var valueParam = Expression.Constant(value);
+
+        if (memberExpression.Type != typeof(string)) {
+            memberExpression = Expression.Convert(memberExpression, typeof(string));
+        }
+
+        var endsWithMethod = typeof(string).GetMethod(nameof(string.EndsWith), [typeof(string)])!;
+        if (!caseSensitive) {
+            var lowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!;
+            memberExpression = Expression.Call(memberExpression, lowerMethod);
+        }
+        return Expression.Call(memberExpression, endsWithMethod, valueParam);
+    }
+    
+    private static Expression BuildContainsExpressionWithSettings(
+        Expression memberExpression,
+        string? value,
+        bool contains,
+        bool caseSensitive,
+        PafisoSettings settings) {
+        if (value == null) {
+            return Expression.Constant(false);
+        }
+
+        if (memberExpression.Type != typeof(string)) {
+            memberExpression = Expression.Convert(memberExpression, typeof(string));
+        }
+
+        if (!caseSensitive) {
+            var containsWithComparisonMethod = typeof(string).GetMethod(
+                nameof(string.Contains),
+                [typeof(string), typeof(StringComparison)])!;
+            var valueParam = Expression.Constant(value);
+            var comparisonParam = Expression.Constant(settings.StringComparison);
+            var methodCallExpression = Expression.Call(memberExpression, containsWithComparisonMethod, valueParam, comparisonParam);
+            return contains ? methodCallExpression : Expression.Not(methodCallExpression);
+        }
+
+        var simpleContainsMethod = typeof(string).GetMethod(nameof(string.Contains), [typeof(string)])!;
+        var simpleValueParam = Expression.Constant(value);
+        var simpleMethodCall = Expression.Call(memberExpression, simpleContainsMethod, simpleValueParam);
+        return contains ? simpleMethodCall : Expression.Not(simpleMethodCall);
+    }
+
+    private static Expression BuildStartsWithExpressionWithSettings(
+        Expression memberExpression,
+        string? value,
+        bool caseSensitive,
+        PafisoSettings settings) {
+        if (value == null) {
+            return Expression.Constant(false);
+        }
+
+        if (memberExpression.Type != typeof(string)) {
+            memberExpression = Expression.Convert(memberExpression, typeof(string));
+        }
+
+        if (!caseSensitive) {
+            var startsWithWithComparisonMethod = typeof(string).GetMethod(
+                nameof(string.StartsWith),
+                [typeof(string), typeof(StringComparison)])!;
+            var valueParam = Expression.Constant(value);
+            var comparisonParam = Expression.Constant(settings.StringComparison);
+            return Expression.Call(memberExpression, startsWithWithComparisonMethod, valueParam, comparisonParam);
+        }
+
+        var simpleStartsWithMethod = typeof(string).GetMethod(nameof(string.StartsWith), [typeof(string)])!;
+        var simpleValueParam = Expression.Constant(value);
+        return Expression.Call(memberExpression, simpleStartsWithMethod, simpleValueParam);
+    }
+
+    private static Expression BuildEndsWithExpressionWithSettings(
+        Expression memberExpression,
+        string? value,
+        bool caseSensitive,
+        PafisoSettings settings) {
+        if (value == null) {
+            return Expression.Constant(false);
+        }
+
+        if (memberExpression.Type != typeof(string)) {
+            memberExpression = Expression.Convert(memberExpression, typeof(string));
+        }
+
+        if (!caseSensitive) {
+            var endsWithWithComparisonMethod = typeof(string).GetMethod(
+                nameof(string.EndsWith),
+                [typeof(string), typeof(StringComparison)])!;
+            var valueParam = Expression.Constant(value);
+            var comparisonParam = Expression.Constant(settings.StringComparison);
+            return Expression.Call(memberExpression, endsWithWithComparisonMethod, valueParam, comparisonParam);
+        }
+
+        var simpleEndsWithMethod = typeof(string).GetMethod(nameof(string.EndsWith), [typeof(string)])!;
+        var simpleValueParam = Expression.Constant(value);
+        return Expression.Call(memberExpression, simpleEndsWithMethod, simpleValueParam);
+    }
     
     private static Expression BuildComparisonExpression<TValue>(Expression memberExpression, FilterOperator op, TValue value, bool caseSensitive) {
         switch (op) {
@@ -209,6 +337,10 @@ public static class ExpressionUtilities {
                 return BuildContainsExpression<TValue>(memberExpression, value?.ToString(), true, caseSensitive);
             case FilterOperator.NotContains:
                 return BuildContainsExpression<TValue>(memberExpression, value?.ToString(), false, caseSensitive);
+            case FilterOperator.StartsWith:
+                return BuildStartsWithExpression<TValue>(memberExpression, value?.ToString(), caseSensitive);
+            case FilterOperator.EndsWith:
+                return BuildEndsWithExpression<TValue>(memberExpression, value?.ToString(), caseSensitive);
             case FilterOperator.Null:
                 return Expression.ReferenceEqual(memberExpression, Expression.Constant(null));
             case FilterOperator.NotNull:
@@ -242,6 +374,9 @@ public static class ExpressionUtilities {
         throw new ArgumentOutOfRangeException(nameof(op), op, null);
     }
 
+    /// <summary>
+    /// Builds a filter expression using legacy ToLower() approach for backward compatibility.
+    /// </summary>
     public static Expression<Func<T,bool>> BuildFilterExpression<T>(string propName, string paramName, FilterOperator op, string? value, bool caseSensitive) {
         var (param, body) = ParameterExpression<T, bool>(propName, paramName);
 
@@ -266,5 +401,118 @@ public static class ExpressionUtilities {
         }
         
         return Expression.Lambda<Func<T,bool>>(comparison, param);
+    }
+
+    /// <summary>
+    /// Builds a filter expression using the specified settings for string comparison.
+    /// </summary>
+    public static Expression<Func<T, bool>> BuildFilterExpression<T>(
+        string propName,
+        string paramName,
+        FilterOperator op,
+        string? value,
+        bool caseSensitive,
+        PafisoSettings settings) {
+        var (param, body) = ParameterExpression<T, bool>(propName, paramName);
+
+        Expression comparison;
+        if (value == null) {
+            comparison = BuildComparisonExpressionWithSettings(body, op, value, false, settings);
+        }
+        else if (float.TryParse(value, out var floatValue)) {
+            comparison = BuildComparisonExpressionWithSettings(body, op, floatValue, false, settings);
+        }
+        else if (bool.TryParse(value, out var boolValue)) {
+            comparison = BuildComparisonExpressionWithSettings(body, op, boolValue, false, settings);
+        }
+        else if (long.TryParse(value, out var longValue)) {
+            comparison = BuildComparisonExpressionWithSettings(body, op, longValue, false, settings);
+        }
+        else {
+            comparison = BuildComparisonExpressionWithSettings(body, op, value, caseSensitive, settings);
+        }
+
+        return Expression.Lambda<Func<T, bool>>(comparison, param);
+    }
+
+    private static Expression BuildComparisonExpressionWithSettings<TValue>(
+        Expression memberExpression,
+        FilterOperator op,
+        TValue value,
+        bool caseSensitive,
+        PafisoSettings settings) {
+        switch (op) {
+            case FilterOperator.Contains:
+                return BuildContainsExpressionWithSettings(memberExpression, value?.ToString(), true, caseSensitive, settings);
+            case FilterOperator.NotContains:
+                return BuildContainsExpressionWithSettings(memberExpression, value?.ToString(), false, caseSensitive, settings);
+            case FilterOperator.StartsWith:
+                return BuildStartsWithExpressionWithSettings(memberExpression, value?.ToString(), caseSensitive, settings);
+            case FilterOperator.EndsWith:
+                return BuildEndsWithExpressionWithSettings(memberExpression, value?.ToString(), caseSensitive, settings);
+            case FilterOperator.Null:
+                return Expression.ReferenceEqual(memberExpression, Expression.Constant(null));
+            case FilterOperator.NotNull:
+                return Expression.Not(Expression.ReferenceEqual(memberExpression, Expression.Constant(null)));
+        }
+
+        if (memberExpression.Type != typeof(TValue)) {
+            memberExpression = Expression.Convert(memberExpression, typeof(TValue));
+        }
+
+        if (typeof(TValue) == typeof(string) && !caseSensitive) {
+            return BuildStringComparisonExpression(memberExpression, op, value?.ToString(), settings);
+        }
+
+        var valueExpression = Expression.Constant(value);
+
+        switch (op) {
+            case FilterOperator.Equals:
+                return Expression.Equal(memberExpression, valueExpression);
+            case FilterOperator.NotEquals:
+                return Expression.NotEqual(memberExpression, valueExpression);
+            case FilterOperator.GreaterThan:
+                return Expression.GreaterThan(memberExpression, valueExpression);
+            case FilterOperator.LessThan:
+                return Expression.LessThan(memberExpression, valueExpression);
+            case FilterOperator.GreaterThanOrEquals:
+                return Expression.GreaterThanOrEqual(memberExpression, valueExpression);
+            case FilterOperator.LessThanOrEquals:
+                return Expression.LessThanOrEqual(memberExpression, valueExpression);
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(op), op, null);
+    }
+
+    private static Expression BuildStringComparisonExpression(
+        Expression memberExpression,
+        FilterOperator op,
+        string? value,
+        PafisoSettings settings) {
+        if (op == FilterOperator.Equals || op == FilterOperator.NotEquals) {
+            var equalsMethod = typeof(string).GetMethod(
+                nameof(string.Equals),
+                [typeof(string), typeof(string), typeof(StringComparison)])!;
+            var valueParam = Expression.Constant(value);
+            var comparisonParam = Expression.Constant(settings.StringComparison);
+            var equalsCall = Expression.Call(null, equalsMethod, memberExpression, valueParam, comparisonParam);
+            return op == FilterOperator.Equals ? equalsCall : Expression.Not(equalsCall);
+        }
+
+        var compareMethod = typeof(string).GetMethod(
+            nameof(string.Compare),
+            [typeof(string), typeof(string), typeof(StringComparison)])!;
+        var valueExpr = Expression.Constant(value);
+        var comparisonExpr = Expression.Constant(settings.StringComparison);
+        var compareCall = Expression.Call(null, compareMethod, memberExpression, valueExpr, comparisonExpr);
+        var zero = Expression.Constant(0);
+
+        return op switch {
+            FilterOperator.GreaterThan => Expression.GreaterThan(compareCall, zero),
+            FilterOperator.LessThan => Expression.LessThan(compareCall, zero),
+            FilterOperator.GreaterThanOrEquals => Expression.GreaterThanOrEqual(compareCall, zero),
+            FilterOperator.LessThanOrEquals => Expression.LessThanOrEqual(compareCall, zero),
+            _ => throw new ArgumentOutOfRangeException(nameof(op), op, null)
+        };
     }
 }

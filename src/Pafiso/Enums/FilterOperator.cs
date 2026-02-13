@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 
-namespace Pafiso;
+namespace Pafiso.Enums;
 
 public enum FilterOperator {
     [EnumMember(Value = "eq")]
@@ -22,5 +22,9 @@ public enum FilterOperator {
     [EnumMember(Value = "null")]
     Null,
     [EnumMember(Value = "notnull")]
-    NotNull
+    NotNull,
+    [EnumMember(Value = "startswith")]
+    StartsWith,
+    [EnumMember(Value = "endswith")]
+    EndsWith
 }

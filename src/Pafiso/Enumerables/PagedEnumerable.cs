@@ -21,12 +21,3 @@ public class PagedEnumerable<T>(IEnumerable<T> countQuery, IEnumerable<T> entrie
         return ((IEnumerable)EntriesQuery).GetEnumerator();
     }
 }
-
-public static class PagedEnumerableExtensions {
-    public static PagedEnumerable<T> WithSearchParameters<T>(this IEnumerable<T> query, SearchParameters searchParameters,
-        Func<IEnumerable<T>, IEnumerable<T>>? applyQuery = null) {
-        var entriesQuery = applyQuery?.Invoke(query) ?? query;
-
-        return new PagedEnumerable<T>(query, entriesQuery);
-    }
-}

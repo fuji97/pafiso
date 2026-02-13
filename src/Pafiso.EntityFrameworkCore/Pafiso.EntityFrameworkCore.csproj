@@ -15,6 +15,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
   </ItemGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Pafiso\Pafiso.csproj" />
   </ItemGroup>
   <ItemGroup>

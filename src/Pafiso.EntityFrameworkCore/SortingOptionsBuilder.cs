@@ -1,0 +1,67 @@
+using System.Linq.Expressions;
+using Pafiso.Enums;
+using Pafiso.Expressions;
+using Pafiso.Extensions;
+using Pafiso.Mapping;
+
+namespace Pafiso.EntityFrameworkCore;
+
+/// <summary>
+/// Builder for configuring sorting with field mappings.
+/// </summary>
+/// <typeparam name="TMapping">The mapping model type (DTO).</typeparam>
+/// <typeparam name="TEntity">The entity type (database model).</typeparam>
+public class SortingOptionsBuilder<TMapping, TEntity> : ISortingConfiguration
+    where TMapping : MappingModel {
+
+    private readonly FieldMapper<TMapping, TEntity> _mapper;
+    private readonly PafisoSettings _settings;
+    private readonly ISortingExpressionBuilder? _expressionBuilder;
+
+    internal SortingOptionsBuilder(PafisoSettings settings, ISortingExpressionBuilder? expressionBuilder = null) {
+        _settings = settings;
+        _mapper = new FieldMapper<TMapping, TEntity>(settings);
+        _expressionBuilder = expressionBuilder;
+    }
+
+    /// <summary>
+    /// Maps a field from the mapping model to a corresponding field in the entity.
+    /// </summary>
+    /// <param name="mappingField">Expression selecting the mapping model field.</param>
+    /// <param name="entityField">Expression selecting the entity field.</param>
+    /// <returns>This builder instance for fluent chaining.</returns>
+    public SortingOptionsBuilder<TMapping, TEntity> Map(
+        Expression<Func<TMapping, object?>> mappingField,
+        Expression<Func<TEntity, object?>> entityField) {
+
+        _mapper.Map(mappingField, entityField);
+        return this;
+    }
+
+    List<Sorting> ISortingConfiguration.ParseSortings(ParsedQueryData data) {
+        var sortings = new List<Sorting>();
+        if (!data.Split.TryGetValue("sortings", out var sortingDicts)) return sortings;
+        
+        foreach (var sortingDict in sortingDicts) {
+            var propertyName = sortingDict["prop"];
+            var sortOrder = EnumExtensions.ParseEnumMember<SortOrder>(sortingDict["ord"]);
+
+            // Create sorting with mapper embedded using static factory method
+            var sorting = Sorting.WithMapper(
+                propertyName,
+                sortOrder,
+                _mapper,
+                _expressionBuilder);
+            sortings.Add(sorting);
+        }
+
+        return sortings;
+    }
+}
+
+/// <summary>
+/// Internal interface for sorting configuration.
+/// </summary>
+internal interface ISortingConfiguration {
+    List<Sorting> ParseSortings(ParsedQueryData data);
+}
