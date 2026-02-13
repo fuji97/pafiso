@@ -1,9 +1,12 @@
 using System.Linq.Expressions;
+using System.Reflection;
 using Pafiso.Enums;
 
 namespace Pafiso.EntityFrameworkCore;
 
 internal static class EfCoreExpressionUtilities {
+    private static readonly MethodInfo ToLowerMethod =
+        typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!;
     internal static Expression<Func<T, bool>> BuildFilterExpression<T>(
         string propName,
         string paramName,
@@ -66,9 +69,8 @@ internal static class EfCoreExpressionUtilities {
         }
 
         if (!caseSensitive) {
-            var lowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!;
-            var lowerMember = Expression.Call(memberExpression, lowerMethod);
-            var pattern = $"%{EscapeLikePattern(value.ToLower())}%";
+            var lowerMember = Expression.Call(memberExpression, ToLowerMethod);
+            var pattern = $"%{EscapeLikePattern(value.ToLowerInvariant())}%";
             var likeExpression = likeExpressionBuilder(lowerMember, pattern);
             return contains ? likeExpression : Expression.Not(likeExpression);
         }
@@ -93,9 +95,8 @@ internal static class EfCoreExpressionUtilities {
         }
 
         if (!caseSensitive) {
-            var lowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!;
-            var lowerMember = Expression.Call(memberExpression, lowerMethod);
-            var pattern = $"{EscapeLikePattern(value.ToLower())}%";
+            var lowerMember = Expression.Call(memberExpression, ToLowerMethod);
+            var pattern = $"{EscapeLikePattern(value.ToLowerInvariant())}%";
             return likeExpressionBuilder(lowerMember, pattern);
         }
 
@@ -118,9 +119,8 @@ internal static class EfCoreExpressionUtilities {
         }
 
         if (!caseSensitive) {
-            var lowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!;
-            var lowerMember = Expression.Call(memberExpression, lowerMethod);
-            var pattern = $"%{EscapeLikePattern(value.ToLower())}";
+            var lowerMember = Expression.Call(memberExpression, ToLowerMethod);
+            var pattern = $"%{EscapeLikePattern(value.ToLowerInvariant())}";
             return likeExpressionBuilder(lowerMember, pattern);
         }
 
@@ -185,15 +185,15 @@ internal static class EfCoreExpressionUtilities {
         string? value,
         PafisoSettings settings,
         Func<Expression, string, Expression> likeExpressionBuilder) {
-        var lowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!;
-        var lowerMember = Expression.Call(memberExpression, lowerMethod);
         switch (op) {
             case FilterOperator.Equals: {
-                var pattern = EscapeLikePattern((value ?? "").ToLower());
+                var lowerMember = Expression.Call(memberExpression, ToLowerMethod);
+                var pattern = EscapeLikePattern((value ?? "").ToLowerInvariant());
                 return likeExpressionBuilder(lowerMember, pattern);
             }
             case FilterOperator.NotEquals: {
-                var pattern = EscapeLikePattern((value ?? "").ToLower());
+                var lowerMember = Expression.Call(memberExpression, ToLowerMethod);
+                var pattern = EscapeLikePattern((value ?? "").ToLowerInvariant());
                 return Expression.Not(likeExpressionBuilder(lowerMember, pattern));
             }
         }
