@@ -10,6 +10,7 @@ namespace Pafiso.EntityFrameworkCore;
 /// Provides EF Core-specific expression building capabilities for Pafiso.
 /// </summary>
 public sealed class EfCoreExpressionBuilder : IFilterExpressionBuilder {
+    private const string LikeEscapeCharacter = "\\";
     public static EfCoreExpressionBuilder Instance { get; } = new();
 
     private EfCoreExpressionBuilder() { }
@@ -29,19 +30,20 @@ public sealed class EfCoreExpressionBuilder : IFilterExpressionBuilder {
         // Get the DbFunctions instance
         var efFunctionsExpr = Expression.Property(null, efFunctionsProperty);
 
-        // Get the Like method: EF.Functions.Like(string, string)
+        // Get the Like method with ESCAPE support: EF.Functions.Like(string, string, string)
         var likeMethod = typeof(DbFunctionsExtensions).GetMethod(
             nameof(DbFunctionsExtensions.Like),
-            [typeof(DbFunctions), typeof(string), typeof(string)])!;
+            [typeof(DbFunctions), typeof(string), typeof(string), typeof(string)])!;
 
         // Ensure the member expression is a string
         if (memberExpression.Type != typeof(string)) {
             memberExpression = Expression.Convert(memberExpression, typeof(string));
         }
 
-        // Build the call: EF.Functions.Like(member, pattern)
+        // Build the call: EF.Functions.Like(member, pattern, escapeCharacter)
         var patternExpr = Expression.Constant(pattern);
-        return Expression.Call(null, likeMethod, efFunctionsExpr, memberExpression, patternExpr);
+        var escapeExpr = Expression.Constant(LikeEscapeCharacter);
+        return Expression.Call(null, likeMethod, efFunctionsExpr, memberExpression, patternExpr, escapeExpr);
     }
 
     public Expression<Func<T, bool>> BuildFilterExpression<T>(
