@@ -45,9 +45,10 @@ internal static class EfCoreExpressionUtilities {
 
     private static string EscapeLikePattern(string value) {
         return value
-            .Replace("[", "[[]")
-            .Replace("%", "[%]")
-            .Replace("_", "[_]");
+            .Replace(@"\", @"\\")
+            .Replace("%", @"\%")
+            .Replace("_", @"\_")
+            .Replace("[", @"\[");
     }
 
     private static Expression BuildContainsExpressionWithLike(
