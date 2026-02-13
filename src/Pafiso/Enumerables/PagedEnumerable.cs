@@ -21,20 +21,3 @@ public class PagedEnumerable<T>(IEnumerable<T> countQuery, IEnumerable<T> entrie
         return ((IEnumerable)EntriesQuery).GetEnumerator();
     }
 }
-
-public static class PagedEnumerableExtensions {
-    extension<T>(IEnumerable<T> query) {
-        public PagedEnumerable<T> WithSearchParameters(SearchParameters searchParameters) {
-            var queryable = query.AsQueryable();
-            var (countQuery, pagedQuery) = searchParameters.ApplyToIQueryable(queryable);
-            return new PagedEnumerable<T>(countQuery, pagedQuery);
-        }
-
-        public PagedEnumerable<T> WithSearchParameters(SearchParameters searchParameters,
-            PafisoSettings? settings) {
-            var queryable = query.AsQueryable();
-            var (countQuery, pagedQuery) = searchParameters.ApplyToIQueryable(queryable, settings);
-            return new PagedEnumerable<T>(countQuery, pagedQuery);
-        }
-    }
-}
