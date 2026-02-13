@@ -29,9 +29,11 @@ public class EfCoreExpressionBuilderTest {
 
         var methodCall = (MethodCallExpression)result;
         // The pattern should be the third argument (after DbFunctions and the property)
-        methodCall.Arguments.Count.ShouldBe(3);
+        methodCall.Arguments.Count.ShouldBe(4);
         var patternArg = (ConstantExpression)methodCall.Arguments[2];
         patternArg.Value.ShouldBe(pattern);
+        var escapeArg = (ConstantExpression)methodCall.Arguments[3];
+        escapeArg.Value.ShouldBe("\\");
     }
 
     [Test]

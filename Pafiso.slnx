@@ -12,6 +12,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Pafiso.AspNetCore.Tests/Pafiso.AspNetCore.Tests.csproj" />
     <Project Path="tests/Pafiso.EntityFrameworkCore.Tests/Pafiso.EntityFrameworkCore.Tests.csproj" />
+    <Project Path="tests/Pafiso.Integration.Tests/Pafiso.Integration.Tests.csproj" />
     <Project Path="tests/Pafiso.Tests/Pafiso.Tests.csproj" />
   </Folder>
 </Solution>
