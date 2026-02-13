@@ -83,12 +83,7 @@ public class DefaultFieldNameResolver : IFieldNameResolver {
             }
         }
 
-        // Try direct property name match (case-insensitive)
-        var directMatch = targetType.GetProperty(fieldName,
-            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-        if (directMatch != null) {
-            return directMatch.Name;
-        }
+        
 
         // Apply naming policy transformation if configured
         if (_settings.PropertyNamingPolicy != null) {
@@ -101,9 +96,17 @@ public class DefaultFieldNameResolver : IFieldNameResolver {
                 }
             }
         }
+        else {
+            // Try direct property name match (case-insensitive)
+            var directMatch = targetType.GetProperty(fieldName,
+                BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            if (directMatch != null) {
+                return directMatch.Name;
+            }
+        }
 
         // Fallback: return original field name (will fail later if property doesn't exist)
-        return fieldName;
+        return fieldName;   // TODO Don't like this, make it return null and fails
     }
 
     private static PropertyInfo? FindPropertyByJsonPropertyName(Type targetType, string jsonPropertyName) {

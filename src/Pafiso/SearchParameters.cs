@@ -99,9 +99,7 @@ public class SearchParameters {
 
         for (var i = 0; i < sortings.Length; i++) {
             var orderedQuery = sortings[i].ApplyToIQueryable(query, settings);
-            if (orderedQuery != null) {
-                return (orderedQuery, i + 1);
-            }
+            return (orderedQuery, i + 1);
         }
 
         return (null, sortings.Length);

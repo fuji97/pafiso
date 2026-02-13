@@ -54,7 +54,6 @@ internal static class EfCoreExpressionUtilities {
         string? value,
         bool contains,
         bool caseSensitive,
-        PafisoSettings settings,
         Func<Expression, string, Expression> likeExpressionBuilder) {
         if (value == null) {
             return Expression.Constant(false);
@@ -72,16 +71,6 @@ internal static class EfCoreExpressionUtilities {
             return contains ? likeExpression : Expression.Not(likeExpression);
         }
 
-        if (!caseSensitive) {
-            var containsWithComparisonMethod = typeof(string).GetMethod(
-                nameof(string.Contains),
-                [typeof(string), typeof(StringComparison)])!;
-            var valueParam = Expression.Constant(value);
-            var comparisonParam = Expression.Constant(settings.StringComparison);
-            var methodCallExpression = Expression.Call(memberExpression, containsWithComparisonMethod, valueParam, comparisonParam);
-            return contains ? methodCallExpression : Expression.Not(methodCallExpression);
-        }
-
         var simpleContainsMethod = typeof(string).GetMethod(nameof(string.Contains), [typeof(string)])!;
         var simpleValueParam = Expression.Constant(value);
         var simpleMethodCall = Expression.Call(memberExpression, simpleContainsMethod, simpleValueParam);
@@ -92,7 +81,6 @@ internal static class EfCoreExpressionUtilities {
         Expression memberExpression,
         string? value,
         bool caseSensitive,
-        PafisoSettings settings,
         Func<Expression, string, Expression> likeExpressionBuilder) {
         if (value == null) {
             return Expression.Constant(false);
@@ -109,15 +97,6 @@ internal static class EfCoreExpressionUtilities {
             return likeExpressionBuilder(lowerMember, pattern);
         }
 
-        if (!caseSensitive) {
-            var startsWithWithComparisonMethod = typeof(string).GetMethod(
-                nameof(string.StartsWith),
-                [typeof(string), typeof(StringComparison)])!;
-            var valueParam = Expression.Constant(value);
-            var comparisonParam = Expression.Constant(settings.StringComparison);
-            return Expression.Call(memberExpression, startsWithWithComparisonMethod, valueParam, comparisonParam);
-        }
-
         var simpleStartsWithMethod = typeof(string).GetMethod(nameof(string.StartsWith), [typeof(string)])!;
         var simpleValueParam = Expression.Constant(value);
         return Expression.Call(memberExpression, simpleStartsWithMethod, simpleValueParam);
@@ -127,7 +106,6 @@ internal static class EfCoreExpressionUtilities {
         Expression memberExpression,
         string? value,
         bool caseSensitive,
-        PafisoSettings settings,
         Func<Expression, string, Expression> likeExpressionBuilder) {
         if (value == null) {
             return Expression.Constant(false);
@@ -144,15 +122,6 @@ internal static class EfCoreExpressionUtilities {
             return likeExpressionBuilder(lowerMember, pattern);
         }
 
-        if (!caseSensitive) {
-            var endsWithWithComparisonMethod = typeof(string).GetMethod(
-                nameof(string.EndsWith),
-                [typeof(string), typeof(StringComparison)])!;
-            var valueParam = Expression.Constant(value);
-            var comparisonParam = Expression.Constant(settings.StringComparison);
-            return Expression.Call(memberExpression, endsWithWithComparisonMethod, valueParam, comparisonParam);
-        }
-
         var simpleEndsWithMethod = typeof(string).GetMethod(nameof(string.EndsWith), [typeof(string)])!;
         var simpleValueParam = Expression.Constant(value);
         return Expression.Call(memberExpression, simpleEndsWithMethod, simpleValueParam);
@@ -167,13 +136,13 @@ internal static class EfCoreExpressionUtilities {
         Func<Expression, string, Expression> likeExpressionBuilder) {
         switch (op) {
             case FilterOperator.Contains:
-                return BuildContainsExpressionWithLike(memberExpression, value?.ToString(), true, caseSensitive, settings, likeExpressionBuilder);
+                return BuildContainsExpressionWithLike(memberExpression, value?.ToString(), true, caseSensitive, likeExpressionBuilder);
             case FilterOperator.NotContains:
-                return BuildContainsExpressionWithLike(memberExpression, value?.ToString(), false, caseSensitive, settings, likeExpressionBuilder);
+                return BuildContainsExpressionWithLike(memberExpression, value?.ToString(), false, caseSensitive, likeExpressionBuilder);
             case FilterOperator.StartsWith:
-                return BuildStartsWithExpressionWithLike(memberExpression, value?.ToString(), caseSensitive, settings, likeExpressionBuilder);
+                return BuildStartsWithExpressionWithLike(memberExpression, value?.ToString(), caseSensitive, likeExpressionBuilder);
             case FilterOperator.EndsWith:
-                return BuildEndsWithExpressionWithLike(memberExpression, value?.ToString(), caseSensitive, settings, likeExpressionBuilder);
+                return BuildEndsWithExpressionWithLike(memberExpression, value?.ToString(), caseSensitive, likeExpressionBuilder);
             case FilterOperator.Null:
                 return Expression.ReferenceEqual(memberExpression, Expression.Constant(null));
             case FilterOperator.NotNull:
