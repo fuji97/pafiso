@@ -220,6 +220,8 @@ All features are opt-in:
 | `contains` | String contains | `filters[0][op]=contains&filters[0][val]=laptop` |
 | `startswith` | String starts with | `filters[0][op]=startswith&filters[0][val]=Pro` |
 | `endswith` | String ends with | `filters[0][op]=endswith&filters[0][val]=Max` |
+| `in` | Value in list | `filters[0][op]=in&filters[0][val]=Electronics,Books` |
+| `notin` | Value not in list | `filters[0][op]=notin&filters[0][val]=Electronics,Books` |
 
 ### Sort Orders
 
@@ -260,6 +262,24 @@ public class Category {
 opt.WithFiltering<ProductFilterDto>()
     .Map(dto => dto.CategoryName, entity => entity.Category.Name);
 ```
+
+### Multi-Value OR Filtering (IN / NOT IN)
+
+Use the `in` operator to match a property against multiple comma-separated values (OR logic):
+
+```
+?filters[0][fields]=Category&filters[0][op]=in&filters[0][val]=Electronics,Books
+```
+
+Result: `Category IN ('Electronics', 'Books')`
+
+Use `notin` to exclude values:
+
+```
+?filters[0][fields]=Category&filters[0][op]=notin&filters[0][val]=Books,Accessories
+```
+
+To include a literal comma in a value, escape it with a backslash: `val=hello\,world,foo` produces two values: `hello,world` and `foo`. A double backslash `\\` produces a literal backslash.
 
 ### Multiple Filters (AND Logic)
 

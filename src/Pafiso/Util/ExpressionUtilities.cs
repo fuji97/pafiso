@@ -184,6 +184,157 @@ public static class ExpressionUtilities {
         return (param, body);
     }
     
+    /// <summary>
+    /// Splits a comma-separated value string, supporting backslash escaping.
+    /// <c>\,</c> produces a literal comma; <c>\\</c> produces a literal backslash.
+    /// </summary>
+    public static List<string> SplitEscapedValues(string value) {
+        var results = new List<string>();
+        var current = new System.Text.StringBuilder();
+        for (var i = 0; i < value.Length; i++) {
+            if (value[i] == '\\' && i + 1 < value.Length) {
+                var next = value[i + 1];
+                if (next == ',') {
+                    current.Append(',');
+                    i++;
+                }
+                else if (next == '\\') {
+                    current.Append('\\');
+                    i++;
+                }
+                else {
+                    current.Append(value[i]);
+                }
+            }
+            else if (value[i] == ',') {
+                results.Add(current.ToString());
+                current.Clear();
+            }
+            else {
+                current.Append(value[i]);
+            }
+        }
+        results.Add(current.ToString());
+        return results;
+    }
+
+    private static Expression BuildInExpression(Expression memberExpression, string? value, bool negate, bool caseSensitive) {
+        if (value == null) {
+            return Expression.Constant(false);
+        }
+
+        var items = SplitEscapedValues(value);
+
+        // Try to detect the type from the first item
+        if (items.Count > 0 && float.TryParse(items[0], out _)) {
+            var parsed = items.Select(float.Parse).ToList();
+            var listExpr = Expression.Constant(parsed);
+            if (memberExpression.Type != typeof(float)) {
+                memberExpression = Expression.Convert(memberExpression, typeof(float));
+            }
+            var containsMethod = typeof(List<float>).GetMethod(nameof(List<float>.Contains), [typeof(float)])!;
+            var call = Expression.Call(listExpr, containsMethod, memberExpression);
+            return negate ? Expression.Not(call) : (Expression)call;
+        }
+
+        if (items.Count > 0 && bool.TryParse(items[0], out _)) {
+            var parsed = items.Select(bool.Parse).ToList();
+            var listExpr = Expression.Constant(parsed);
+            if (memberExpression.Type != typeof(bool)) {
+                memberExpression = Expression.Convert(memberExpression, typeof(bool));
+            }
+            var containsMethod = typeof(List<bool>).GetMethod(nameof(List<bool>.Contains), [typeof(bool)])!;
+            var call = Expression.Call(listExpr, containsMethod, memberExpression);
+            return negate ? Expression.Not(call) : (Expression)call;
+        }
+
+        if (items.Count > 0 && long.TryParse(items[0], out _)) {
+            var parsed = items.Select(long.Parse).ToList();
+            var listExpr = Expression.Constant(parsed);
+            if (memberExpression.Type != typeof(long)) {
+                memberExpression = Expression.Convert(memberExpression, typeof(long));
+            }
+            var containsMethod = typeof(List<long>).GetMethod(nameof(List<long>.Contains), [typeof(long)])!;
+            var call = Expression.Call(listExpr, containsMethod, memberExpression);
+            return negate ? Expression.Not(call) : (Expression)call;
+        }
+
+        // Default: string
+        {
+            var parsed = caseSensitive ? items : items.Select(s => s.ToLower()).ToList();
+            var listExpr = Expression.Constant(parsed);
+            if (memberExpression.Type != typeof(string)) {
+                memberExpression = Expression.Convert(memberExpression, typeof(string));
+            }
+            if (!caseSensitive) {
+                var lowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!;
+                memberExpression = Expression.Call(memberExpression, lowerMethod);
+            }
+            var containsMethod = typeof(List<string>).GetMethod(nameof(List<string>.Contains), [typeof(string)])!;
+            var call = Expression.Call(listExpr, containsMethod, memberExpression);
+            return negate ? Expression.Not(call) : (Expression)call;
+        }
+    }
+
+    private static Expression BuildInExpressionWithSettings(Expression memberExpression, string? value, bool negate, bool caseSensitive, PafisoSettings settings) {
+        if (value == null) {
+            return Expression.Constant(false);
+        }
+
+        var items = SplitEscapedValues(value);
+
+        // Try to detect the type from the first item
+        if (items.Count > 0 && float.TryParse(items[0], out _)) {
+            var parsed = items.Select(float.Parse).ToList();
+            var listExpr = Expression.Constant(parsed);
+            if (memberExpression.Type != typeof(float)) {
+                memberExpression = Expression.Convert(memberExpression, typeof(float));
+            }
+            var containsMethod = typeof(List<float>).GetMethod(nameof(List<float>.Contains), [typeof(float)])!;
+            var call = Expression.Call(listExpr, containsMethod, memberExpression);
+            return negate ? Expression.Not(call) : (Expression)call;
+        }
+
+        if (items.Count > 0 && bool.TryParse(items[0], out _)) {
+            var parsed = items.Select(bool.Parse).ToList();
+            var listExpr = Expression.Constant(parsed);
+            if (memberExpression.Type != typeof(bool)) {
+                memberExpression = Expression.Convert(memberExpression, typeof(bool));
+            }
+            var containsMethod = typeof(List<bool>).GetMethod(nameof(List<bool>.Contains), [typeof(bool)])!;
+            var call = Expression.Call(listExpr, containsMethod, memberExpression);
+            return negate ? Expression.Not(call) : (Expression)call;
+        }
+
+        if (items.Count > 0 && long.TryParse(items[0], out _)) {
+            var parsed = items.Select(long.Parse).ToList();
+            var listExpr = Expression.Constant(parsed);
+            if (memberExpression.Type != typeof(long)) {
+                memberExpression = Expression.Convert(memberExpression, typeof(long));
+            }
+            var containsMethod = typeof(List<long>).GetMethod(nameof(List<long>.Contains), [typeof(long)])!;
+            var call = Expression.Call(listExpr, containsMethod, memberExpression);
+            return negate ? Expression.Not(call) : (Expression)call;
+        }
+
+        // Default: string — use StringComparison-aware approach
+        // For simplicity, we lowercase values and member when case-insensitive (same as legacy)
+        {
+            var parsed = caseSensitive ? items : items.Select(s => s.ToLower()).ToList();
+            var listExpr = Expression.Constant(parsed);
+            if (memberExpression.Type != typeof(string)) {
+                memberExpression = Expression.Convert(memberExpression, typeof(string));
+            }
+            if (!caseSensitive) {
+                var lowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!;
+                memberExpression = Expression.Call(memberExpression, lowerMethod);
+            }
+            var containsMethod = typeof(List<string>).GetMethod(nameof(List<string>.Contains), [typeof(string)])!;
+            var call = Expression.Call(listExpr, containsMethod, memberExpression);
+            return negate ? Expression.Not(call) : (Expression)call;
+        }
+    }
+
     private static Expression BuildContainsExpression<T>(Expression memberExpression, string? value, bool contains, bool caseSensitive) {
         if (value == null) {
             return Expression.Constant(false);
@@ -333,6 +484,10 @@ public static class ExpressionUtilities {
     
     private static Expression BuildComparisonExpression<TValue>(Expression memberExpression, FilterOperator op, TValue value, bool caseSensitive) {
         switch (op) {
+            case FilterOperator.In:
+                return BuildInExpression(memberExpression, value?.ToString(), false, caseSensitive);
+            case FilterOperator.NotIn:
+                return BuildInExpression(memberExpression, value?.ToString(), true, caseSensitive);
             case FilterOperator.Contains:
                 return BuildContainsExpression<TValue>(memberExpression, value?.ToString(), true, caseSensitive);
             case FilterOperator.NotContains:
@@ -380,6 +535,12 @@ public static class ExpressionUtilities {
     public static Expression<Func<T,bool>> BuildFilterExpression<T>(string propName, string paramName, FilterOperator op, string? value, bool caseSensitive) {
         var (param, body) = ParameterExpression<T, bool>(propName, paramName);
 
+        // Handle In/NotIn early — the raw comma-separated value would break float.TryParse etc.
+        if (op is FilterOperator.In or FilterOperator.NotIn) {
+            var inExpr = BuildInExpression(body, value, op == FilterOperator.NotIn, caseSensitive);
+            return Expression.Lambda<Func<T, bool>>(inExpr, param);
+        }
+
         if (!caseSensitive) {
             value = value?.ToLower();
         }
@@ -415,6 +576,12 @@ public static class ExpressionUtilities {
         PafisoSettings settings) {
         var (param, body) = ParameterExpression<T, bool>(propName, paramName);
 
+        // Handle In/NotIn early — the raw comma-separated value would break float.TryParse etc.
+        if (op is FilterOperator.In or FilterOperator.NotIn) {
+            var inExpr = BuildInExpressionWithSettings(body, value, op == FilterOperator.NotIn, caseSensitive, settings);
+            return Expression.Lambda<Func<T, bool>>(inExpr, param);
+        }
+
         Expression comparison;
         if (value == null) {
             comparison = BuildComparisonExpressionWithSettings(body, op, value, false, settings);
@@ -442,6 +609,10 @@ public static class ExpressionUtilities {
         bool caseSensitive,
         PafisoSettings settings) {
         switch (op) {
+            case FilterOperator.In:
+                return BuildInExpressionWithSettings(memberExpression, value?.ToString(), false, caseSensitive, settings);
+            case FilterOperator.NotIn:
+                return BuildInExpressionWithSettings(memberExpression, value?.ToString(), true, caseSensitive, settings);
             case FilterOperator.Contains:
                 return BuildContainsExpressionWithSettings(memberExpression, value?.ToString(), true, caseSensitive, settings);
             case FilterOperator.NotContains:

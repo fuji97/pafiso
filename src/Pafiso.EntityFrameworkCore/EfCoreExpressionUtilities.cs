@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Pafiso.Enums;
+using Pafiso.Util;
 
 namespace Pafiso.EntityFrameworkCore;
 
@@ -16,6 +17,12 @@ internal static class EfCoreExpressionUtilities {
         PafisoSettings settings,
         Func<Expression, string, Expression> likeExpressionBuilder) {
         var (param, body) = ParameterExpression<T>(propName, paramName);
+
+        // Handle In/NotIn early — the raw comma-separated value would break float.TryParse etc.
+        if (op is FilterOperator.In or FilterOperator.NotIn) {
+            var inExpr = BuildInExpression(body, value, op == FilterOperator.NotIn, caseSensitive);
+            return Expression.Lambda<Func<T, bool>>(inExpr, param);
+        }
 
         Expression comparison;
         if (value == null) {
@@ -44,6 +51,63 @@ internal static class EfCoreExpressionUtilities {
             body = Expression.PropertyOrField(body, member);
         }
         return (param, body);
+    }
+
+    private static Expression BuildInExpression(Expression memberExpression, string? value, bool negate, bool caseSensitive) {
+        if (value == null) {
+            return Expression.Constant(false);
+        }
+
+        var items = ExpressionUtilities.SplitEscapedValues(value);
+
+        // Try to detect the type from the first item
+        if (items.Count > 0 && float.TryParse(items[0], out _)) {
+            var parsed = items.Select(float.Parse).ToList();
+            var listExpr = Expression.Constant(parsed);
+            if (memberExpression.Type != typeof(float)) {
+                memberExpression = Expression.Convert(memberExpression, typeof(float));
+            }
+            var containsMethod = typeof(List<float>).GetMethod(nameof(List<float>.Contains), [typeof(float)])!;
+            var call = Expression.Call(listExpr, containsMethod, memberExpression);
+            return negate ? Expression.Not(call) : (Expression)call;
+        }
+
+        if (items.Count > 0 && bool.TryParse(items[0], out _)) {
+            var parsed = items.Select(bool.Parse).ToList();
+            var listExpr = Expression.Constant(parsed);
+            if (memberExpression.Type != typeof(bool)) {
+                memberExpression = Expression.Convert(memberExpression, typeof(bool));
+            }
+            var containsMethod = typeof(List<bool>).GetMethod(nameof(List<bool>.Contains), [typeof(bool)])!;
+            var call = Expression.Call(listExpr, containsMethod, memberExpression);
+            return negate ? Expression.Not(call) : (Expression)call;
+        }
+
+        if (items.Count > 0 && long.TryParse(items[0], out _)) {
+            var parsed = items.Select(long.Parse).ToList();
+            var listExpr = Expression.Constant(parsed);
+            if (memberExpression.Type != typeof(long)) {
+                memberExpression = Expression.Convert(memberExpression, typeof(long));
+            }
+            var containsMethod = typeof(List<long>).GetMethod(nameof(List<long>.Contains), [typeof(long)])!;
+            var call = Expression.Call(listExpr, containsMethod, memberExpression);
+            return negate ? Expression.Not(call) : (Expression)call;
+        }
+
+        // Default: string — use ToLowerInvariant for values, ToLower() for member (EF Core pattern)
+        {
+            var parsed = caseSensitive ? items : items.Select(s => s.ToLowerInvariant()).ToList();
+            var listExpr = Expression.Constant(parsed);
+            if (memberExpression.Type != typeof(string)) {
+                memberExpression = Expression.Convert(memberExpression, typeof(string));
+            }
+            if (!caseSensitive) {
+                memberExpression = Expression.Call(memberExpression, ToLowerMethod);
+            }
+            var containsMethod = typeof(List<string>).GetMethod(nameof(List<string>.Contains), [typeof(string)])!;
+            var call = Expression.Call(listExpr, containsMethod, memberExpression);
+            return negate ? Expression.Not(call) : (Expression)call;
+        }
     }
 
     private static string EscapeLikePattern(string value) {

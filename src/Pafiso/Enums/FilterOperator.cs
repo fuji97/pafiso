@@ -26,5 +26,9 @@ public enum FilterOperator {
     [EnumMember(Value = "startswith")]
     StartsWith,
     [EnumMember(Value = "endswith")]
-    EndsWith
+    EndsWith,
+    [EnumMember(Value = "in")]
+    In,
+    [EnumMember(Value = "notin")]
+    NotIn
 }
